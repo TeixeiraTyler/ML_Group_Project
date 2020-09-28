@@ -31,7 +31,7 @@ class Filterer:
         self.testingData = self.testingData.drop(labelsToRemove, axis=1)
         self.combinedData = [self.trainingData, self.testingData]
 
-        isolateOutliers(self.trainingData)
+        # isolateOutliers(self.trainingData)
 
         return DataObject(self.trainingData, self.testingData, self.combinedData)
 
