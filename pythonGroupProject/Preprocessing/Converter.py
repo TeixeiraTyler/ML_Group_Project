@@ -21,23 +21,18 @@ class Converter:
         self.combinedData = dataObject.combinedData
 
     def convertData(self):
-        self.trainingData = mapCategoricalToOrdinal(self.trainingData)
-        self.testingData = mapCategoricalToOrdinal(self.testingData)
+        self.trainingData = self.mapCategoricalToOrdinal(self.trainingData)
+        self.testingData = self.mapCategoricalToOrdinal(self.testingData)
         self.combinedData = [self.trainingData, self.testingData]
         return DataObject(self.trainingData, self.testingData, self.combinedData)
 
 
-def mapCategoricalToOrdinal(dataset):
-    number = LabelEncoder()
-    # objectTypeLabels = dataset.select_dtypes(include=['object']).columns
-    # for label in objectTypeLabels:
-    # dataset[label] = number.fit_transform(dataset[label].astype('str'))
-
-    dataset['MSZoning'] = number.fit_transform(dataset['MSZoning'].astype('str'))
-    dataset['Street'] = number.fit_transform(dataset['Street'].astype('str'))
-    dataset['Alley'] = number.fit_transform(dataset['Alley'].astype('str'))
-    dataset['LotShape'] = number.fit_transform(dataset['LotShape'].astype('str'))
-    dataset['LandContour'] = number.fit_transform(dataset['LandContour'].astype('str'))
-    dataset['PoolQC'] = number.fit_transform(dataset['PoolQC'].astype('str'))
-
-    return dataset
+    def mapCategoricalToOrdinal(self, dataset):
+        ordinal_label = ['MSZoning','LandSlope','LotConfig','Utilities','LandContour','LotShape','Alley','Street','Neighborhood','Condition1','Condition2','BldgType','HouseStyle','RoofStyle','RoofMatl','Exterior1st','MasVnrType','ExterQual','ExterCond','Foundation','BsmtQual','BsmtCond','BsmtExposure','BsmtFinType1','BsmtFinType2','Heating','HeatingQC','CentralAir','Electrical','KitchenQual','Functional','FireplaceQu','GarageType','GarageFinish','GarageQual','GarageCond','PavedDrive','PoolQC','Fence','MiscFeature','SaleType','SaleCondition']
+        cat = []
+        for i in ordinal_label:
+            unique = dataset[i].unique()
+            categ = dataset[i].astype("category").cat.categories
+            cat.append({i:ix for ix,i in enumerate(categ)})
+            dataset[i] = dataset[i].astype("category").cat.codes
+        return dataset
