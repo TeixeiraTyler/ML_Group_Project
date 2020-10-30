@@ -32,7 +32,6 @@ combinedData = dataObject.combinedData
 
 
 
-
 # print(dataset['KitchenQual'].isnull().sum())
 # trainingData.info()
 # print('_'*40)
