@@ -20,6 +20,10 @@ from Preprocessing.Preprocessor import Preprocessor
 trainingData = pd.read_csv('train.csv')
 testingData = pd.read_csv('test.csv')
 
+# Set display size for outputting data
+pd.set_option('display.max_columns', 100)
+pd.set_option('display.max_rows', 50)
+
 # Preprocessing
 # Takes in the read data and spits out processed data
 preprocessor = Preprocessor(trainingData, testingData)

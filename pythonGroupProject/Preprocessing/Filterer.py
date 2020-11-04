@@ -12,7 +12,7 @@ from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 from DataObject import DataObject
-'h'
+
 
 class Filterer:
     def __init__(self, dataObject):
@@ -35,9 +35,8 @@ class Filterer:
 
         return DataObject(self.trainingData, self.testingData, self.combinedData)
 
-
-def isolateOutliers(dataset):
-    iso = IsolationForest(contamination=0.01)
-    iso.fit(dataset)
-    dataset["outlier"] = pd.Series(iso.predict(dataset))
-    print(iso)
+    def isolateOutliers(self, dataset):
+        iso = IsolationForest(contamination=0.01)
+        iso.fit(dataset)
+        dataset["outlier"] = pd.Series(iso.predict(dataset))
+        print(iso)

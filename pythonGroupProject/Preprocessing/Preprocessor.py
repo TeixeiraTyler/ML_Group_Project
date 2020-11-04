@@ -11,6 +11,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import LabelEncoder
 
+from Preprocessing.Correlator import Correlator
 from Preprocessing.Filler import Filler
 from Preprocessing.Converter import Converter
 from Preprocessing.Encoder import Encoder
@@ -39,6 +40,11 @@ class Preprocessor:
         dataObject = filterer.filterData()
 
         encoder = Encoder(dataObject)
-        dataObject = encoder.encodeData()
+        dataObject = encoder.encode()
+
+        correlator = Correlator(dataObject)
+        dataObject = correlator.correlateData()
+
+        print(dataObject.trainingData)
 
         return dataObject
