@@ -18,7 +18,6 @@ from Preprocessing.Encoder import Encoder
 from Preprocessing.Filterer import Filterer
 from DataObject import DataObject
 
-
 # main class for preprocessing data
 class Preprocessor:
     def __init__(self, trainingData, testingData):
@@ -30,20 +29,51 @@ class Preprocessor:
     def process(self):
         dataObject = DataObject(self.trainingData, self.testingData, self.combinedData)
 
-        filler = Filler(dataObject)
-        dataObject = filler.fillMissingData()
+        # Step 1 is preparing environment
 
-        converter = Converter(dataObject)
-        dataObject = converter.convertData()
+        step2 = ExploratoryDataAnalysis(dataObject)
+        dataObject = step2.go()
 
-        filterer = Filterer(dataObject)
-        dataObject = filterer.filterData()
+        step3 = CheckDataQuality(dataObject)
+        dataObject = step3.go()
 
-        encoder = Encoder(dataObject)
-        dataObject = encoder.encode()
+        step4 = MappingOrdinalFeatures(dataObject)
+        dataObject = step4.go()
 
-        correlator = Correlator(dataObject)
-        dataObject = correlator.correlateData()
+        step5 = FeatureEngineering(dataObject)
+        dataObject = step5.go()
+
+        step6 = Train(dataObject)
+        dataObject = step6.go()
+
+        step7 = SelectFeatures(dataObject)
+        dataObject = step7.go()
+
+        step8 = CompressData(dataObject)
+        dataObject = step8.go()
+
+        step9 = Modeling(dataObject)
+        dataObject = step9.go()
+
+        step10 = FinalSteps(dataObject)
+        dataObject = step10.go()
+
+
+
+        # filler = Filler(dataObject)
+        # dataObject = filler.fillMissingData()
+        #
+        # converter = Converter(dataObject)
+        # dataObject = converter.convertData()
+        #
+        # filterer = Filterer(dataObject)
+        # dataObject = filterer.filterData()
+        #
+        # encoder = Encoder(dataObject)
+        # dataObject = encoder.encode()
+        #
+        # correlator = Correlator(dataObject)
+        # dataObject = correlator.correlateData()
 
         print(dataObject.trainingData)
 
