@@ -51,15 +51,16 @@ class Preprocessor:
 
         step8 = CompressData(dataObject)
         dataObject = step8.go()
-
+        
+        #input Dataobject
+        #Dataobject.trainingData = train 
+		#Dataobject.testingData = y_train
+        
         step9 = Modeling(dataObject)
-        dataObject = step9.go()
-
-        step10 = FinalSteps(dataObject)
-        dataObject = step10.go()
+        ouput_ensembled = step9.go()
 
 
-
+        ouput_ensembled.to_csv('SalePrice_N_submission.csv', index = False)
         # filler = Filler(dataObject)
         # dataObject = filler.fillMissingData()
         #
