@@ -1,24 +1,11 @@
-import pandas as pd
-import random as rnd
-import numpy as np
+scale = RobustScaler() 
+df = scale.fit_transform(train)
 
-import seaborn as sns
-import matplotlib.pyplot as plt
+pca = PCA().fit(df) # whiten=True
+print('With only 120 features: {:6.4%}'.format(sum(pca.explained_variance_ratio_[:120])),"%\n")
 
-from sklearn.ensemble import RandomForestClassifier, IsolationForest
-from sklearn import tree
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import cross_val_score, train_test_split
-from sklearn.preprocessing import LabelEncoder
+print('After PCA, {:3} features only not explained {:6.4%} of variance ratio from the original {:3}'.format(120,(sum(pca.explained_variance_ratio_[120:])),df.shape[1]))
+del df,all_data
+																					
 
-from DataObject import DataObject
-
-
-class Modeling:
-    def __init__(self, dataObject):
-        self.trainingData = dataObject.trainingData
-        self.testingData = dataObject.testingData
-        self.combinedData = dataObject.combinedData
-
-    def go(self):
-        # Main script here
+																					

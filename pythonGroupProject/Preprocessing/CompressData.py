@@ -30,4 +30,4 @@ class CompressData:
                                                                                     df.shape[1]))
         #dataObject.trainingData = df
         return(dataObject)
-        # Main script here
+        # Main script heres
