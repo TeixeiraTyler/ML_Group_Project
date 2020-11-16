@@ -36,6 +36,8 @@ class Preprocessor:
 
         step3 = CheckDataQuality(dataObject)
         dataObject = step3.go()
+        Utils.printDatasetNulls(dataObject.trainingData)
+        Utils.printDatasetNulls(dataObject.testingData)
 
         step4 = MappingOrdinalFeatures(dataObject)
         dataObject = step4.go()
