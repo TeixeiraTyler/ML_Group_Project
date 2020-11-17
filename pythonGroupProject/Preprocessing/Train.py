@@ -21,4 +21,9 @@ class Train:
         self.combinedData = dataObject.combinedData
 
     def go(self):
-        # Main script here
+        # Main script here, said to use all data here, all_data....[], error doesn't know cols???
+        y_train = (self.combinedData.SalePrice[self.combinedData.SalePrice>0].reset_index(drop=True, inplace=False))
+        # Data with Polynomials
+        train = self.combinedData.loc[(self.combinedData.SalePrice>0), cols].reset_index(drop=True, inplace=False)
+        test = self.combinedData.loc[(self.combineData.SalePrice==0), cols].reset_index(drop=True, inplace=False)
+ 
