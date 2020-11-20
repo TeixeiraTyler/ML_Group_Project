@@ -13,6 +13,7 @@ from sklearn.preprocessing import LabelEncoder
 
 from Utils import Utils
 from Preprocessing.Preprocessor import Preprocessor
+from Preprocessing.DataObject import DataObject
 
 # END OF IMPORTS #
 
@@ -24,13 +25,12 @@ testingData = pd.read_csv('test.csv')
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.max_rows', 50)
 
-train_ID = trainingData['Id']
 test_ID = testingData['Id']
 
 # Preprocessing
 # Takes in the read data and spits out processed data
 preprocessor = Preprocessor(trainingData, testingData)
-dataObject = preprocessor.process()
+dataObject = preprocessor.process(test_ID)
 trainingData = dataObject.trainingData
 testingData = dataObject.testingData
 combinedData = dataObject.combinedData

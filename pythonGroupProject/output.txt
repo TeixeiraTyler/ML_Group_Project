@@ -1,0 +1,5 @@
+Data nulls: 6965
+Data nulls: 0
+Data nulls: 7000
+Data nulls: 2
+[('Alley', 3), ('LandContour', 4), ('MasVnrType', 4), ('MiscFeature', 4), ('MSZoning', 5), ('LotConfig', 5), ('BldgType', 5), ('Electrical', 5), ('Condition2', 6), ('RoofStyle', 6), ('Foundation', 6), ('Heating', 6), ('SaleCondition', 6), ('RoofMatl', 7), ('GarageType', 7), ('HouseStyle', 8), ('Condition1', 9), ('SaleType', 9), ('Exterior1st', 15), ('Exterior2nd', 16), ('Neighborhood', 25)]

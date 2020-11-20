@@ -16,68 +16,72 @@ from Preprocessing.Filler import Filler
 from Preprocessing.Converter import Converter
 from Preprocessing.Encoder import Encoder
 from Preprocessing.Filterer import Filterer
-from DataObject import DataObject
+from Preprocessing.DataObject import DataObject
+from Preprocessing.ExploratoryDataAnalysis import ExploratoryDataAnalysis
+from Preprocessing.CheckDataQuality import CheckDataQuality
+from Preprocessing.MappingOrdinalFeatures import MappingOrdinalFeatures
+from Preprocessing.FeatureEngineering import FeatureEngineering
+from Preprocessing.SelectFeatures import SelectFeatures
+from Preprocessing.Modeling import Modeling
 
 # main class for preprocessing data
 class Preprocessor:
-    def __init__(self, trainingData, testingData):
-        self.trainingData = trainingData
-        self.testingData = testingData
-        self.combinedData = [trainingData, testingData]
+	def __init__(self, trainingData, testingData):
+		self.trainingData = trainingData
+		self.testingData = testingData
+		self.combinedData = [trainingData, testingData]
 
-    # main function that combines all preprocessing.
-    def process(self):
-        dataObject = DataObject(self.trainingData, self.testingData, self.combinedData)
+	# main function that combines all preprocessing.
+	def process(self, test_ID):
+		dataObject = DataObject(self.trainingData, self.testingData, self.combinedData)
 
-        # Step 1 is preparing environment
+		# Step 1 is preparing environment
 
-        step2 = ExploratoryDataAnalysis(dataObject)
-        dataObject = step2.go()
+		step2 = ExploratoryDataAnalysis(dataObject)
+		dataObject = step2.go()
 
-        step3 = CheckDataQuality(dataObject)
-        dataObject = step3.go()
-        Utils.printDatasetNulls(dataObject.trainingData)
-        Utils.printDatasetNulls(dataObject.testingData)
+		step3 = CheckDataQuality(dataObject)
+		dataObject = step3.go()
 
-        step4 = MappingOrdinalFeatures(dataObject)
-        dataObject = step4.go()
+		step4 = MappingOrdinalFeatures(dataObject)
+		dataObject = step4.go()
 
-        step5 = FeatureEngineering(dataObject)
-        dataObject = step5.go()
+		step5 = FeatureEngineering(dataObject)
+		dataObject, y_train, cols, colsP = step5.go()
 
-        step6 = Train(dataObject)
-        dataObject = step6.go()
+		#step6 = Train(dataObject)
+		#dataObject = step6.go()
 
-        step7 = SelectFeatures(dataObject)
-        dataObject = step7.go()
+		step7 = SelectFeatures(dataObject)
+		dataObject, y_train, RFEcv = step7.go(y_train, cols, colsP)
 
-        step8 = CompressData(dataObject)
-        dataObject = step8.go()
-        
-        #input Dataobject
-        #Dataobject.trainingData = train 
+		#step8 = CompressData(dataObject)
+		#dataObject = step8.go(y_train)
+		
+		#input Dataobject
+		#Dataobject.trainingData = train 
 		#Dataobject.testingData = y_train
-        
-        step9 = Modeling(dataObject)
-        ouput_ensembled = step9.go()
+		
+		step9 = Modeling(dataObject)
+		ouput_ensembled = step9.go(y_train, test_ID, colsP, RFEcv)
 
 
-        ouput_ensembled.to_csv('SalePrice_N_submission.csv', index = False)
-        # filler = Filler(dataObject)
-        # dataObject = filler.fillMissingData()
-        #
-        # converter = Converter(dataObject)
-        # dataObject = converter.convertData()
-        #
-        # filterer = Filterer(dataObject)
-        # dataObject = filterer.filterData()
-        #
-        # encoder = Encoder(dataObject)
-        # dataObject = encoder.encode()
-        #
-        # correlator = Correlator(dataObject)
-        # dataObject = correlator.correlateData()
+		ouput_ensembled.to_csv('SalePrice_N_submission.csv', index = False)
+		# filler = Filler(dataObject)
+		# dataObject = filler.fillMissingData()
+		#
+		# converter = Converter(dataObject)
+		# dataObject = converter.convertData()
+		#
+		# filterer = Filterer(dataObject)
+		# dataObject = filterer.filterData()
+		#
+		# encoder = Encoder(dataObject)
+		# dataObject = encoder.encode()
+		#
+		# correlator = Correlator(dataObject)
+		# dataObject = correlator.correlateData()
 
-        print(dataObject.trainingData)
+		print(dataObject.trainingData)
 
-        return dataObject
+		return dataObject

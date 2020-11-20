@@ -10,19 +10,39 @@ from sklearn import tree
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.preprocessing import LabelEncoder
+from sklearn.base import TransformerMixin
 
-from DataObject import DataObject
+from Preprocessing.DataObject import DataObject
+
+class DataFrameImputer(TransformerMixin):
+
+	def __init__(self):
+		"""
+		Impute missing values:
+		- Columns of dtype object are imputed with the most frequent value in column.
+		- Columns of other types are imputed with mean of column.
+		"""
+	def fit(self, X, y=None):
+
+		self.fill = pd.Series([X[c].value_counts().index[0]
+			if X[c].dtype == np.dtype('O') else X[c].mean() for c in X],
+			index=X.columns)
+
+		return self
+
+	def transform(self, X, y=None):
+		return X.fillna(self.fill)
 
 
 class CheckDataQuality:
-    def __init__(self, dataObject):
-        self.trainingData = dataObject.trainingData
-        self.testingData = dataObject.testingData
-        self.combinedData = dataObject.combinedData
+	def __init__(self, dataObject):
+		self.trainingData = dataObject.trainingData
+		self.testingData = dataObject.testingData
+		self.combinedData = dataObject.combinedData
 
-    def go(self):
-        all_data = pd.concat((self.trainingData, self.testingData)).reset_index(drop=True)
-        all_data.drop('Utilities', axis=1, inplace=True)
+	def go(self):
+		all_data = pd.concat((self.trainingData, self.testingData)).reset_index(drop=True)
+		all_data.drop('Utilities', axis=1, inplace=True)
 		all_data.Electrical = all_data.Electrical.fillna('SBrkr')
 
 		all_data.GarageType = all_data.GarageType.fillna('NA')
@@ -30,7 +50,7 @@ class CheckDataQuality:
 		# Group by GarageType and fill missing value with median where GarageType=='Detchd' and 0 for the others
 		cmedian = all_data[all_data.GarageType=='Detchd'].GarageArea.median()
 		all_data.loc[all_data.GarageType=='Detchd', 'GarageArea'] = all_data.loc[all_data.GarageType=='Detchd', 
-		                                                                         'GarageArea'].fillna(cmedian)
+																				 'GarageArea'].fillna(cmedian)
 		all_data.GarageArea = all_data.GarageArea.fillna(0)
 
 		cmedian = all_data[all_data.GarageType=='Detchd'].GarageCars.median()
@@ -73,7 +93,7 @@ class CheckDataQuality:
 		all_data.loc[(all_data.BsmtFinSF2==0) & (all_data.BsmtFinType2!='Unf') & (~all_data.BsmtFinType2.isnull()), 'BsmtUnfSF'] = 0.0
 
 		nulls_cols = {'BsmtExposure': 'NA', 'BsmtFinType2': 'NA', 'BsmtQual': 'NA', 'BsmtCond': 'NA', 'BsmtFinType1': 'NA',
-		              'BsmtFinSF1': 0, 'BsmtFinSF2': 0, 'BsmtUnfSF': 0 ,'TotalBsmtSF': 0, 'BsmtFullBath': 0, 'BsmtHalfBath': 0}
+					  'BsmtFinSF1': 0, 'BsmtFinSF2': 0, 'BsmtUnfSF': 0 ,'TotalBsmtSF': 0, 'BsmtFullBath': 0, 'BsmtHalfBath': 0}
 
 		all_data = all_data.fillna(value=nulls_cols)
 
@@ -84,8 +104,8 @@ class CheckDataQuality:
 		PoolQC = {0: 'NA', 1: 'Po', 2: 'Fa', 3: 'TA', 4: 'Gd', 5: 'Ex'}
 
 		all_data.loc[(all_data.PoolArea>0) & (all_data.PoolQC.isnull()), ['PoolQC']] =\
-		        ((all_data.loc[(all_data.PoolArea>0) & (all_data.PoolQC.isnull()), ['OverallQual']]/2).round()).\
-		        apply(lambda x: x.map(PoolQC))
+				((all_data.loc[(all_data.PoolArea>0) & (all_data.PoolQC.isnull()), ['OverallQual']]/2).round()).\
+				apply(lambda x: x.map(PoolQC))
 
 		all_data.PoolQC = all_data.PoolQC.fillna('NA')
 
@@ -94,7 +114,7 @@ class CheckDataQuality:
 		all_data.loc[(all_data.Fireplaces==0) & (all_data.FireplaceQu.isnull()), ['FireplaceQu']] = 'NA'
 
 		all_data.loc[(all_data.KitchenAbvGr>0) & (all_data.KitchenQual.isnull()), 
-		             ['KitchenQual']] = all_data.KitchenQual.mode()[0]
+					 ['KitchenQual']] = all_data.KitchenQual.mode()[0]
 
 		all_data.Alley = all_data.Alley.fillna('NA')
 		all_data.Fence = all_data.Fence.fillna('NA')
@@ -103,7 +123,7 @@ class CheckDataQuality:
 
 		all_data = DataFrameImputer().fit_transform(all_data)
 
-		self.trainingData = all_data.loc[(all_data.SalePrice>0), cols].reset_index(drop=True, inplace=False)
-		self.testingData = all_data.loc[(all_data.SalePrice==0), cols].reset_index(drop=True, inplace=False)
+		self.trainingData = all_data.loc[(all_data.SalePrice>0)].reset_index(drop=True, inplace=False)
+		self.testingData = all_data.loc[(all_data.SalePrice==0)].reset_index(drop=True, inplace=False)
 		self.combinedData = [self.trainingData, self.testingData]
 		return DataObject(self.trainingData, self.testingData, self.combinedData)

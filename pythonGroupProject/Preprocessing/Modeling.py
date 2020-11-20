@@ -8,46 +8,70 @@ import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
 from sklearn import tree
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import cross_val_score, train_test_split
-from sklearn.preprocessing import LabelEncoder
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LinearRegression, OrthogonalMatchingPursuit, Lasso
+from sklearn.linear_model import SGDRegressor, PassiveAggressiveRegressor, HuberRegressor, BayesianRidge
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, BaggingRegressor, ExtraTreesRegressor
+from sklearn.base import BaseEstimator, TransformerMixin, RegressorMixin, clone
+from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, cross_val_predict, train_test_split
+from xgboost import XGBRegressor
 
-from DataObject import DataObject
+from Preprocessing.DataObject import DataObject
 from sklearn.preprocessing import RobustScaler, PolynomialFeatures, StandardScaler, LabelEncoder
 
 class AveragingModels(BaseEstimator, RegressorMixin, TransformerMixin):
-    def __init__(self, models):
-        self.models = models
-        
-    # we define clones of the original models to fit the data in
-    def fit(self, X, y):
-        self.models_ = [clone(x) for x in self.models]
-        
-        # Train cloned base models
-        for model in self.models_:
-            model.fit(X, y)
+	def __init__(self, models):
+		self.models = models
+		
+	# we define clones of the original models to fit the data in
+	def fit(self, X, y):
+		self.models_ = [clone(x) for x in self.models]
+		
+		# Train cloned base models
+		for model in self.models_:
+			model.fit(X, y)
 
-        return self
-    
-    #Now we do the predictions for cloned models and average them
-    def predict(self, X):
-        predictions = np.column_stack([model.predict(X) for model in self.models_])
-        return np.mean(predictions, axis=1)   
+		return self
+	
+	#Now we do the predictions for cloned models and average them
+	def predict(self, X):
+		predictions = np.column_stack([model.predict(X) for model in self.models_])
+		return np.mean(predictions, axis=1)   
 
+class select_fetaures(object): # BaseEstimator, TransformerMixin, 
+	def __init__(self, select_cols):
+		self.select_cols_ = select_cols
+	
+	def fit(self, X, Y ):
+		print('Recive {0:2d} features...'.format(X.shape[1]))
+		return self
 
+	def transform(self, X):
+		print('Select {0:2d} features'.format(X.loc[:, self.select_cols_].shape[1]))
+		return X.loc[:, self.select_cols_]    
+
+	def fit_transform(self, X, Y):
+		self.fit(X, Y)
+		df = self.transform(X)
+		return df 
+		#X.loc[:, self.select_cols_]    
+
+	def __getitem__(self, x):
+		return self.X[x], self.Y[x]
 
 class Modeling:
-    def __init__(self, dataObject):
-        self.trainingData = dataObject.trainingData
-        self.testingData = dataObject.testingData
-        self.combinedData = dataObject.combinedData
+	def __init__(self, dataObject):
+		self.trainingData = dataObject.trainingData
+		self.testingData = dataObject.testingData
+		self.combinedData = dataObject.combinedData
 		
 		
 	def RMSLE (self, y, y_pred):
 		return (np.sqrt(mean_squared_error(y, y_pred)))
 
 
-    def get_results(self, model, name='NAN', log=False):
-    
+	def get_results(self, model, name='NAN', log=False):
+	
 		rcols = ['Name','Model', 'BestParameters', 'Scorer', 'Index', 'BestScore', 'BestScoreStd', 'MeanScore', 
 				 'MeanScoreStd', 'Best']
 		res = pd.DataFrame(columns=rcols)
@@ -99,8 +123,8 @@ class Modeling:
 		print('---------------------------------------')
 		print('Best Parameters:')
 		print(gs.best_params_)
-    
-    return res
+	
+		return res
 	
 	############# redisual
 	def resilduals_plots(self, lr, X, Y, log=False):
@@ -139,11 +163,20 @@ class Modeling:
 
 		plt.show()  
 
-    return residual
+		return residual
 	
-	def go(self):
-        train = self.trainingData
-		y_train = self.testingData
+	def go(self, y_train, test_ID):
+		scale = RobustScaler() 
+		df = scale.fit_transform(train)
+
+		pca = PCA().fit(df) # whiten=True
+		print('With only 120 features: {:6.4%}'.format(sum(pca.explained_variance_ratio_[:120])),"%\n")
+
+		print('After PCA, {:3} features only not explained {:6.4%} of variance ratio from the original {:3}'.format(120,
+																							(sum(pca.explained_variance_ratio_[120:])),
+																							df.shape[1]))
+		train = self.trainingData
+		test = self.testingData
 		
 		#LASSOO
 		model = Pipeline([
@@ -180,7 +213,6 @@ class Modeling:
 		lasso.fit(train,y_train)
 
 		results = self.get_results(lasso, 'lasso Lg1', log=True)
-		display(results.loc[:, 'Scorer' : 'MeanScoreStd'])
 		r = self.resilduals_plots(lasso, train, y_train, log=True)
 			
 		fica =  list(r.IDX[abs(r.Residual)<=0.3])
@@ -190,7 +222,6 @@ class Modeling:
 
 		lasso.fit(t, y_t)
 		results = self.get_results(lasso, 'lasso Lg2', log=True)
-		display(results.loc[:, 'Scorer' : 'MeanScoreStd'])
 		r = self.resilduals_plots(lasso, t, y_t, log=True)
 		del  t, y_t, fica
 
@@ -201,7 +232,6 @@ class Modeling:
 		lasso.fit(train, y_train)
 
 		results = self.get_results(lasso, 'lasso', log=False)
-		display(results.loc[:, 'Scorer' : 'MeanScoreStd'])
 		r = self.resilduals_plots(lasso, train, y_train, log=False)
 
 		#3
@@ -587,6 +617,7 @@ class Modeling:
 		averaged_models = AveragingModels(models = (XGBR, BayR, PassR))
 		averaged_models.fit(train, y_train) 
 		stacked_train_pred = averaged_models.predict(train)
+		stacked_pred = (averaged_models.predict(test))
 		rmsle = self.RMSLE(y_train,stacked_train_pred)
 		
 		print('RMSLE score on the train data: {:.4f}'.format(rmsle))
