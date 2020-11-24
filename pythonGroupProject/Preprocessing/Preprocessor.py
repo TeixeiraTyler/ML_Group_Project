@@ -47,13 +47,13 @@ class Preprocessor:
 		dataObject = step4.go()
 
 		step5 = FeatureEngineering(dataObject)
-		dataObject, y_train, cols, colsP = step5.go()
+		dataObject, all_data, y_train, cols, colsP = step5.go()
 
 		#step6 = Train(dataObject)
 		#dataObject = step6.go()
 
 		step7 = SelectFeatures(dataObject)
-		dataObject, y_train, RFEcv = step7.go(y_train, cols, colsP)
+		dataObject, totalCols, RFEcv, XGBestCols = step7.go(all_data, cols, colsP)
 
 		#step8 = CompressData(dataObject)
 		#dataObject = step8.go(y_train)
@@ -63,7 +63,7 @@ class Preprocessor:
 		#Dataobject.testingData = y_train
 		
 		step9 = Modeling(dataObject)
-		ouput_ensembled = step9.go(y_train, test_ID, colsP, RFEcv)
+		ouput_ensembled = step9.go(all_data, totalCols, test_ID, colsP, RFEcv, XGBestCols)
 
 
 		ouput_ensembled.to_csv('SalePrice_N_submission.csv', index = False)

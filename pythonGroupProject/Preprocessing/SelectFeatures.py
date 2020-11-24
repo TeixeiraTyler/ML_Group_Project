@@ -68,10 +68,13 @@ class SelectFeatures:
 		self.testingData = dataObject.testingData
 		self.combinedData = dataObject.combinedData
 
-	def go(self, y_train, cols, colsP):
+	def go(self, all_data, cols, colsP):
+		train = all_data.loc[(all_data.SalePrice>0), cols].reset_index(drop=True, inplace=False)
+		y_train = all_data.SalePrice[all_data.SalePrice>0].reset_index(drop=True, inplace=False)
+		test = all_data.loc[(all_data.SalePrice==0), cols].reset_index(drop=True, inplace=False)
 		# Main script here
 		scale = RobustScaler();
-		df = pd.DataFrame(scale.fit_transform(self.trainingData[cols]), columns= cols)
+		df = pd.DataFrame(scale.fit_transform(train[cols]), columns= cols)
 	   #select features based on P values
 		ln_model=sm.OLS(y_train,df)
 		result=ln_model.fit()
@@ -171,12 +174,11 @@ class SelectFeatures:
 		print('\n{0:2d} features removed if use the union of selections: {1:}'.format(len(cols.difference(bcols)), cols.difference(bcols)))
 
 		totalCols = list(bcols.union(set(colsP)))
-		self.trainingData = all_data.loc[all_data.SalePrice>0, list(totalCols)].reset_index(drop=True, inplace=False)
-		y_train = all_data.SalePrice[all_data.SalePrice>0].reset_index(drop=True, inplace=False)
-		self.testingData = all_data.loc[all_data.SalePrice==0 , list(totalCols)].reset_index(drop=True, inplace=False)
-		self.combinedData = [self.trainingData, self.testingData]
+		#self.trainingData = self.trainingData.loc[list(totalCols)].reset_index(drop=True, inplace=False)
+		#self.testingData = self.testingData.loc[list(totalCols)].reset_index(drop=True, inplace=False)
+		#self.combinedData = [self.trainingData, self.testingData]
 
-		return DataObject(self.trainingData, self.testingData, self.combinedData), y_train, RFEcv
+		return DataObject(self.trainingData, self.testingData, self.combinedData), totalCols, RFEcv, XGBestCols
 
 	def backwardElimination(self, x, Y, sl, columns):
 		ini = len(columns)

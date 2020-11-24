@@ -29,10 +29,10 @@ class FeatureEngineering:
 		#self.trainingData = self.featureEngineer(self.trainingData, ntrain)
 		#self.testingData = self.featureEngineer(self.testingData, ntrain)
 		all_data = pd.concat((self.trainingData, self.testingData)).reset_index(drop=True)
-		self.trainingData, self.testingData, y_train, cols, colsP = self.featureEngineer(all_data, ntrain)
-		self.combinedData = [self.trainingData, self.testingData]
+		all_data, y_train, cols, colsP = self.featureEngineer(all_data, ntrain)
+		#self.combinedData = [self.trainingData, self.testingData]
 
-		return DataObject(self.trainingData, self.testingData, self.combinedData), y_train, cols, colsP
+		return DataObject(self.trainingData, self.testingData, self.combinedData), all_data, y_train, cols, colsP
 
 	def featureEngineer(self, all_data, ntrain):
 		all_data.loc[(all_data.PoolArea > 0), ['MiscFeature']] = 'Pool'
@@ -228,10 +228,10 @@ class FeatureEngineering:
 		del output_df, target_feature_names, res, pf
 
 		y_train = (all_data.SalePrice[all_data.SalePrice>0].reset_index(drop=True, inplace=False))
-		self.trainingData = all_data.loc[(all_data.SalePrice>0), cols].reset_index(drop=True, inplace=False)
-		self.testingData = all_data.loc[(all_data.SalePrice==0), cols].reset_index(drop=True, inplace=False)
+		#self.trainingData = all_data.loc[(all_data.SalePrice>0), cols].reset_index(drop=True, inplace=False)
+		#self.testingData = all_data.loc[(all_data.SalePrice==0), cols].reset_index(drop=True, inplace=False)
 
-		return self.trainingData, self.testingData, y_train, cols, colsP
+		return all_data, y_train, cols, colsP
 
 	def one_hot_encode(self, df):
 		categorical_cols = df.select_dtypes(include=['object']).columns

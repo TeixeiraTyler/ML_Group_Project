@@ -9,11 +9,13 @@ from sklearn.ensemble import RandomForestClassifier, IsolationForest
 from sklearn import tree
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.decomposition import PCA
-from sklearn.linear_model import LinearRegression, OrthogonalMatchingPursuit, Lasso
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.linear_model import LinearRegression, OrthogonalMatchingPursuit, Lasso, ElasticNet
 from sklearn.linear_model import SGDRegressor, PassiveAggressiveRegressor, HuberRegressor, BayesianRidge
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, BaggingRegressor, ExtraTreesRegressor
 from sklearn.base import BaseEstimator, TransformerMixin, RegressorMixin, clone
 from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, cross_val_predict, train_test_split
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 from xgboost import XGBRegressor
 
 from Preprocessing.DataObject import DataObject
@@ -70,7 +72,7 @@ class Modeling:
 		return (np.sqrt(mean_squared_error(y, y_pred)))
 
 
-	def get_results(self, model, name='NAN', log=False):
+	def get_results(self, gs, model, name='NAN', log=False):
 	
 		rcols = ['Name','Model', 'BestParameters', 'Scorer', 'Index', 'BestScore', 'BestScoreStd', 'MeanScore', 
 				 'MeanScoreStd', 'Best']
@@ -161,11 +163,15 @@ class Modeling:
 			plt.hlines(y=0, xmin=min(Y)-1, xmax=max(Y)+1, lw=2, color='red')
 			plt.xlim([min(Y)-1, max(Y)+1])
 
-		plt.show()  
+		#plt.show()  
 
 		return residual
 	
-	def go(self, y_train, test_ID):
+	def go(self, all_data, totalCols, test_ID, colsP, RFEcv, XGBestCols):
+		train = all_data.loc[all_data.SalePrice>0 , list(totalCols)].reset_index(drop=True, inplace=False)
+		y_train = all_data.SalePrice[all_data.SalePrice>0].reset_index(drop=True, inplace=False)
+		test = all_data.loc[all_data.SalePrice==0 , list(totalCols)].reset_index(drop=True, inplace=False)
+
 		scale = RobustScaler() 
 		df = scale.fit_transform(train)
 
@@ -175,8 +181,6 @@ class Modeling:
 		print('After PCA, {:3} features only not explained {:6.4%} of variance ratio from the original {:3}'.format(120,
 																							(sum(pca.explained_variance_ratio_[120:])),
 																							df.shape[1]))
-		train = self.trainingData
-		test = self.testingData
 		
 		#LASSOO
 		model = Pipeline([
@@ -212,7 +216,7 @@ class Modeling:
 
 		lasso.fit(train,y_train)
 
-		results = self.get_results(lasso, 'lasso Lg1', log=True)
+		results = self.get_results(gs, lasso, 'lasso Lg1', log=True)
 		r = self.resilduals_plots(lasso, train, y_train, log=True)
 			
 		fica =  list(r.IDX[abs(r.Residual)<=0.3])
@@ -221,7 +225,7 @@ class Modeling:
 		y_t = y_train.iloc[fica].reset_index(drop=True, inplace=False)
 
 		lasso.fit(t, y_t)
-		results = self.get_results(lasso, 'lasso Lg2', log=True)
+		results = self.get_results(gs, lasso, 'lasso Lg2', log=True)
 		r = self.resilduals_plots(lasso, t, y_t, log=True)
 		del  t, y_t, fica
 
@@ -231,7 +235,7 @@ class Modeling:
 
 		lasso.fit(train, y_train)
 
-		results = self.get_results(lasso, 'lasso', log=False)
+		results = self.get_results(gs, lasso, 'lasso', log=False)
 		r = self.resilduals_plots(lasso, train, y_train, log=False)
 
 		#3
@@ -275,7 +279,7 @@ class Modeling:
 
 		XGBR.fit(train, y_train)
 
-		res = self.get_results(XGBR, 'XGBRegressor', log=False)
+		res = self.get_results(gs, XGBR, 'XGBRegressor', log=False)
 		self.resilduals_plots(XGBR, train, y_train, log=False)
 		results = pd.concat([results, res], axis=0)
 		res.loc[:, 'Scorer' : 'MeanScoreStd']
@@ -325,7 +329,7 @@ class Modeling:
 		 ])
 
 		GBR.fit(train, y_train)
-		res = self.get_results(GBR, 'GBR' , log=False)
+		res = self.get_results(gs, GBR, 'GBR' , log=False)
 		self.resilduals_plots(GBR, train, y_train, log=False)
 		results = pd.concat([results, res], axis=0)
 		res.loc[:, 'Scorer' : 'MeanScoreStd']
@@ -366,7 +370,7 @@ class Modeling:
 
 		ELA.fit(train, y_train)
 
-		res = self.get_results(ELA, 'ELA', log=False)
+		res = self.get_results(gs, ELA, 'ELA', log=False)
 		self.resilduals_plots(ELA, train, y_train, log=False)
 		results = pd.concat([results, res], axis=0)
 		res.loc[:, 'Scorer' : 'MeanScoreStd']
@@ -409,7 +413,7 @@ class Modeling:
 		 ])
 
 		BayR.fit(train, y_train)
-		res = self.get_results(BayR, 'BayR', log=False)
+		res = self.get_results(gs, BayR, 'BayR', log=False)
 		self.resilduals_plots(BayR, train, y_train, log=False)
 		results = pd.concat([results, res], axis=0)
 		res.loc[:, 'Scorer' : 'MeanScoreStd']
@@ -442,7 +446,7 @@ class Modeling:
 
 		LR.fit(train, y_train)
 
-		res = self.get_results(LR, 'LR', log=False)
+		res = self.get_results(gs, LR, 'LR', log=False)
 		self.resilduals_plots(LR, train, y_train, log=False)
 		results = pd.concat([results, res], axis=0)
 		res.loc[:, 'Scorer' : 'MeanScoreStd']
@@ -477,7 +481,7 @@ class Modeling:
 		 ])
 
 		ORT.fit(train, y_train)
-		res = self.get_results(ORT, 'ORT', log=False)
+		res = self.get_results(gs, ORT, 'ORT', log=False)
 		self.resilduals_plots(ORT, train, y_train, log=False)
 		results = pd.concat([results, res], axis=0)
 		res.loc[:, 'Scorer' : 'MeanScoreStd']
@@ -517,7 +521,7 @@ class Modeling:
 
 		Hub.fit(train, y_train)
 
-		res = self.get_results(Hub, 'Hub', log=False)
+		res = self.get_results(gs, Hub, 'Hub', log=False)
 		self.resilduals_plots(Hub, train, y_train, log=False)
 		results = pd.concat([results, res], axis=0)
 		res.loc[:, 'Scorer' : 'MeanScoreStd']
@@ -559,7 +563,7 @@ class Modeling:
 		 ])
 
 		PassR.fit(train, y_train)
-		res = self.get_results(PassR, 'PassR', log=False)
+		res = self.get_results(gs, PassR, 'PassR', log=False)
 		self.resilduals_plots(PassR, train, y_train, log=False)
 		results = pd.concat([results, res], axis=0)
 		res.loc[:, 'Scorer' : 'MeanScoreStd']
@@ -609,7 +613,7 @@ class Modeling:
 		 ])
 
 		SGDR.fit(train, y_train)
-		res = self.get_results(SGDR, 'SGDR', log=False)
+		res = self.get_results(gs, SGDR, 'SGDR', log=False)
 		self.resilduals_plots(SGDR, train, y_train, log=False)
 		results = pd.concat([results, res], axis=0)
 		res.loc[:, 'Scorer' : 'MeanScoreStd']
