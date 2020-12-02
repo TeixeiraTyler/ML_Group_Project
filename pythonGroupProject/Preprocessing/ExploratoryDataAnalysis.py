@@ -29,18 +29,15 @@ class ExploratoryDataAnalysis:
 
 		self.testingData['SalePrice'] = 0
 
-		#Deleting outliers
-		self.trainingData = self.trainingData.drop(self.trainingData[(self.trainingData.GrLivArea>4000) & (self.trainingData.SalePrice<300000)].index)
-
-		self.trainingData = self.trainingData[self.trainingData.GrLivArea * self.trainingData.TotRmsAbvGrd < 45000]
-
+		self.trainingData = self.trainingData.drop(self.trainingData[self.trainingData.SalePrice < 300000].index)
+		self.trainingData = self.trainingData.drop(self.trainingData[(self.trainingData.GrLivArea > 4000)].index)
 		self.trainingData = self.trainingData[self.trainingData.GarageArea * self.trainingData.GarageCars < 3700]
+		self.trainingData = self.trainingData[self.trainingData.GrLivArea * self.trainingData.TotRmsAbvGrd < 45000]
+		self.trainingData = self.trainingData[(self.trainingData.FullBath + (self.trainingData.HalfBath*0.5) + self.trainingData.BsmtFullBath + (self.trainingData.BsmtHalfBath*0.5)) < 5]
 
-		self.trainingData = self.trainingData[(self.trainingData.FullBath + (self.trainingData.HalfBath*0.5) + self.trainingData.BsmtFullBath + (self.trainingData.BsmtHalfBath*0.5))<5]
-
-		self.trainingData = self.trainingData.loc[~(self.trainingData.SalePrice==392500.0)]
-		self.trainingData = self.trainingData.loc[~((self.trainingData.SalePrice==275000.0) & (self.trainingData.Neighborhood=='Crawfor'))]
-		self.trainingData.SalePrice = np.log1p(self.trainingData.SalePrice)
+		# self.trainingData = self.trainingData.loc[~(self.trainingData.SalePrice==392500.0)]
+		# self.trainingData = self.trainingData.loc[~((self.trainingData.SalePrice==275000.0) & (self.trainingData.Neighborhood=='Crawfor'))]
+		# self.trainingData.SalePrice = np.log1p(self.trainingData.SalePrice)
 		
 		self.combinedData = [self.trainingData, self.testingData]
 		return DataObject(self.trainingData, self.testingData, self.combinedData)
