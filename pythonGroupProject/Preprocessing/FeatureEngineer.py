@@ -18,84 +18,136 @@ from scipy.stats import skew, norm, probplot, boxcox
 from Preprocessing.DataObject import DataObject
 
 
-class FeatureEngineering:
+class FeatureEngineer:
 	def __init__(self, dataObject):
 		self.trainingData = dataObject.trainingData
 		self.testingData = dataObject.testingData
 		self.combinedData = dataObject.combinedData
 
 	def go(self):
+		self.trainingData = self.changeYearsToAge(self.trainingData)
+		self.testingData = self.changeYearsToAge(self.testingData)
+
+		self.trainingData = self.addRemodAndConvertAge(self.trainingData)
+		self.testingData = self.addRemodAndConvertAge(self.testingData)
+
+		self.trainingData = self.defineUint8Types(self.trainingData)
+		self.testingData = self.defineUint8Types(self.testingData)
+
 		ntrain = self.trainingData.shape[0]
 		#self.trainingData = self.featureEngineer(self.trainingData, ntrain)
 		#self.testingData = self.featureEngineer(self.testingData, ntrain)
-		all_data = pd.concat((self.trainingData, self.testingData)).reset_index(drop=True)
-		all_data, y_train, cols, colsP = self.featureEngineer(all_data, ntrain)
-		#self.combinedData = [self.trainingData, self.testingData]
+		#all_data = pd.concat((self.trainingData, self.testingData)).reset_index(drop=True)
+		# self.trainingData, y_train, cols, colsP = self.featureEngineer(self.trainingData, ntrain)
+		# self.testingData, y_train, cols, colsP = self.featureEngineer(self.testingData, ntrain)
+		# self.combinedData = [self.trainingData, self.testingData]
+		self.combinedData, y_train, cols, colsP = self.featureEngineer(self.combinedData, ntrain)
 
-		return DataObject(self.trainingData, self.testingData, self.combinedData), all_data, y_train, cols, colsP
+		return DataObject(self.trainingData, self.testingData, self.combinedData), self.combinedData, y_train, cols, colsP
 
-	def featureEngineer(self, all_data, ntrain):
-		all_data.loc[(all_data.PoolArea > 0), ['MiscFeature']] = 'Pool'
-		all_data.loc[(all_data.PoolArea > 0), ['MiscVal']] = all_data.loc[(all_data.PoolArea > 0), ['MiscVal', 'PoolArea']].apply(lambda x: (x.MiscVal + x.PoolArea), axis=1)
+	def changeYearsToAge(self, dataset):
+		dataset.YearBuilt = self.ageYears(dataset.YearBuilt)
+		dataset.YearRemodAdd = self.ageYears(dataset.YearRemodAdd)
+		dataset.GarageYrBlt = self.ageYears(dataset.GarageYrBlt)
+		dataset.YrSold = self.ageYears(dataset.YrSold)
+		return dataset
 
-		all_data['TotalExtraPoints'] = all_data.HeatingQC + all_data.PoolQC + all_data.FireplaceQu + all_data.KitchenQual
-		all_data['TotalPoints'] = (all_data.ExterQual + all_data.FireplaceQu + all_data.GarageQual + all_data.KitchenQual + 
-			all_data.BsmtQual + all_data.BsmtExposure + all_data.BsmtFinType1 + all_data.PoolQC + all_data.ExterCond + 
-			all_data.BsmtCond + all_data.GarageCond + all_data.OverallCond + all_data.BsmtFinType2 + all_data.HeatingQC) + all_data.OverallQual ** 2
+	def ageYears(self, feature):
+		StartingYear = 2011
+		return feature.apply(lambda x: 0 if x == 0 else (StartingYear - x))
 
-		df = all_data.loc[(all_data.SalePrice > 0), ['TotalPoints', 'TotalExtraPoints', 'OverallQual', 'OverallCond', 'ExterQual', 'ExterCond', 'BsmtQual', 'BsmtCond', 'BsmtExposure', 'BsmtFinType1', 'BsmtFinType2', 'HeatingQC', 'PoolQC', 'KitchenQual', 'FireplaceQu', 'GarageQual', 'GarageCond', 'SalePrice']]
+	def addRemodAndConvertAge(self, dataset):
+		dataset['Remod'] = -1
+		dataset.loc[(dataset.YearBuilt == dataset.YearRemodAdd), ['Remod']] = 0
+		dataset.loc[(dataset.YearBuilt != dataset.YearRemodAdd), ['Remod']] = 1
 
-		all_data['GarageArea_x_Car'] = all_data.GarageArea * all_data.GarageCars
+		dataset['Age'] = dataset.YearRemodAdd - dataset.YrSold
 
-		all_data['TotalBsmtSF_x_Bsm'] = all_data.TotalBsmtSF * all_data['1stFlrSF']
+		dataset["WasNew"] = -1
+		dataset.loc[(dataset.YearBuilt == dataset.YrSold), ['WasNew']] = 1
+		dataset.loc[(dataset.YearBuilt != dataset.YrSold), ['WasNew']] = 0
+
+		return dataset
+
+	def defineUint8Types(self, dataset):
+		dataset.CentralAir = dataset.CentralAir.astype('uint8')
+		# dataset.Garage_Newest = dataset.Garage_Newest.astype('uint8')
+		dataset.EnclosedPorch = dataset.EnclosedPorch.astype('uint8')
+		dataset.FullBath = dataset.FullBath.astype('uint8')
+		dataset.HalfBath = dataset.HalfBath.astype('uint8')
+		dataset.BsmtFullBath = dataset.BsmtFullBath.astype('uint8')
+		dataset.BsmtHalfBath = dataset.BsmtHalfBath.astype('uint8')
+		dataset.Remod = dataset.Remod.astype('uint8')
+		dataset.WasNew = dataset.WasNew.astype('uint8')
+		dataset.Street = dataset.Street.astype('uint8')
+		dataset.PavedDrive = dataset.PavedDrive.astype('uint8')
+		dataset.Functional = dataset.Functional.astype('uint8')
+		dataset.LandSlope = dataset.LandSlope.astype('uint8')
+
+		return dataset
+
+	def featureEngineer(self, data, ntrain):
+		data.loc[(data.PoolArea > 0), ['MiscFeature']] = 'Pool'
+		data.loc[(data.PoolArea > 0), ['MiscVal']] = data.loc[(data.PoolArea > 0), ['MiscVal', 'PoolArea']].apply(lambda x: (x.MiscVal + x.PoolArea), axis=1)
+
+		data['TotalExtraPoints'] = data.HeatingQC + data.PoolQC + data.FireplaceQu + data.KitchenQual
+		data['TotalPoints'] = (data.ExterQual + data.FireplaceQu + data.GarageQual + data.KitchenQual +
+							   data.BsmtQual + data.BsmtExposure + data.BsmtFinType1 + data.PoolQC + data.ExterCond +
+							   data.BsmtCond + data.GarageCond + data.OverallCond + data.BsmtFinType2 + data.HeatingQC) + data.OverallQual ** 2
+
+		df = data.loc[(data.SalePrice > 0), ['TotalPoints', 'TotalExtraPoints', 'OverallQual', 'OverallCond', 'ExterQual', 'ExterCond', 'BsmtQual', 'BsmtCond', 'BsmtExposure', 'BsmtFinType1', 'BsmtFinType2', 'HeatingQC', 'PoolQC', 'KitchenQual', 'FireplaceQu', 'GarageQual', 'GarageCond', 'SalePrice']]
+
+		data['GarageArea_x_Car'] = data.GarageArea * data.GarageCars
+
+		data['TotalBsmtSF_x_Bsm'] = data.TotalBsmtSF * data['1stFlrSF']
 
 		# We don´t have a feature with all construct area, maybe it is an interesting feature to create.
-		all_data['ConstructArea'] = (all_data.TotalBsmtSF + all_data.WoodDeckSF + all_data.GrLivArea + all_data.OpenPorchSF + 
-			all_data.TSsnPorch + all_data.ScreenPorch + all_data.EnclosedPorch + all_data.MasVnrArea + all_data.GarageArea + all_data.PoolArea)
+		data['ConstructArea'] = (data.TotalBsmtSF + data.WoodDeckSF + data.GrLivArea + data.OpenPorchSF +
+								 data.TSsnPorch + data.ScreenPorch + data.EnclosedPorch + data.MasVnrArea + data.GarageArea + data.PoolArea)
 
 		# all_data['TotalArea'] = all_data.ConstructArea + all_data.LotArea
 
-		all_data['Garage_Newest'] = all_data.YearBuilt > all_data.GarageYrBlt
-		all_data.Garage_Newest = all_data.Garage_Newest.apply(lambda x: 1 if x else 0)
+		data['Garage_Newest'] = data.YearBuilt > data.GarageYrBlt
+		data.Garage_Newest = data.Garage_Newest.apply(lambda x: 1 if x else 0)
 
-		all_data[
-			'TotalPorchSF'] = all_data.OpenPorchSF + all_data.EnclosedPorch + all_data.TSsnPorch + all_data.ScreenPorch + all_data.WoodDeckSF
-		all_data.EnclosedPorch = all_data.EnclosedPorch.apply(lambda x: 1 if x else 0)
+		data[
+			'TotalPorchSF'] = data.OpenPorchSF + data.EnclosedPorch + data.TSsnPorch + data.ScreenPorch + data.WoodDeckSF
+		data.EnclosedPorch = data.EnclosedPorch.apply(lambda x: 1 if x else 0)
 
-		all_data['LotAreaMultSlope'] = all_data.LotArea * all_data.LandSlope
+		data['LotAreaMultSlope'] = data.LotArea * data.LandSlope
 
-		all_data['BsmtSFPoints'] = (all_data.BsmtQual ** 2 + all_data.BsmtCond + all_data.BsmtExposure +
-									all_data.BsmtFinType1 + all_data.BsmtFinType2)
+		data['BsmtSFPoints'] = (data.BsmtQual ** 2 + data.BsmtCond + data.BsmtExposure +
+								data.BsmtFinType1 + data.BsmtFinType2)
 
-		all_data['BsmtSFMultPoints'] = all_data.TotalBsmtSF * (
-					all_data.BsmtQual ** 2 + all_data.BsmtCond + all_data.BsmtExposure +
-					all_data.BsmtFinType1 + all_data.BsmtFinType2)
+		data['BsmtSFMultPoints'] = data.TotalBsmtSF * (
+				data.BsmtQual ** 2 + data.BsmtCond + data.BsmtExposure +
+				data.BsmtFinType1 + data.BsmtFinType2)
 
-		all_data['TotBathrooms'] = all_data.FullBath + (all_data.HalfBath * 0.5) + all_data.BsmtFullBath + (
-					all_data.BsmtHalfBath * 0.5)
-		all_data.FullBath = all_data.FullBath.apply(lambda x: 1 if x else 0)
-		all_data.HalfBath = all_data.HalfBath.apply(lambda x: 1 if x else 0)
-		all_data.BsmtFullBath = all_data.BsmtFullBath.apply(lambda x: 1 if x else 0)
-		all_data.BsmtHalfBath = all_data.BsmtHalfBath.apply(lambda x: 1 if x else 0)
-
-
+		data['TotBathrooms'] = data.FullBath + (data.HalfBath * 0.5) + data.BsmtFullBath + (
+				data.BsmtHalfBath * 0.5)
+		data.FullBath = data.FullBath.apply(lambda x: 1 if x else 0)
+		data.HalfBath = data.HalfBath.apply(lambda x: 1 if x else 0)
+		data.BsmtFullBath = data.BsmtFullBath.apply(lambda x: 1 if x else 0)
+		data.BsmtHalfBath = data.BsmtHalfBath.apply(lambda x: 1 if x else 0)
 
 
 
-		all_data.MSSubClass = all_data.MSSubClass.astype('str')
-		all_data.MoSold = all_data.MoSold.astype('str')
 
-		all_data, dummies = self.one_hot_encode(all_data)
 
-		ZeroTest = all_data[dummies][ntrain:].sum() == 0
-		all_data.drop(dummies[ZeroTest], axis=1, inplace=True)
+		data.MSSubClass = data.MSSubClass.astype('str')
+		data.MoSold = data.MoSold.astype('str')
+
+		data, dummies = self.one_hot_encode(data)
+
+		ZeroTest = data[dummies][ntrain:].sum() == 0
+		data.drop(dummies[ZeroTest], axis=1, inplace=True)
 		print('Dummins in test dataset with all observatios equal to 0:', len(dummies[ZeroTest]), 'of \n',
 			  dummies[ZeroTest], '\n')
 		dummies = dummies.drop(dummies[ZeroTest])
 
 		# Find dummies with all training observatiosn are equal to 0
-		ZeroTest = all_data[dummies][:ntrain].sum() == 0
-		all_data.drop(dummies[ZeroTest], axis=1, inplace=True)
+		ZeroTest = data[dummies][:ntrain].sum() == 0
+		data.drop(dummies[ZeroTest], axis=1, inplace=True)
 		print('Dummins in trainig dataset with all observatios equal to 0:', len(dummies[ZeroTest]), 'of \n',
 			  dummies[ZeroTest], '\n')
 		dummies = dummies.drop(dummies[ZeroTest])
@@ -108,35 +160,35 @@ class FeatureEngineering:
 
 
 
-		all_data.YearBuilt = self.AgeYears(all_data.YearBuilt)
-		all_data.YearRemodAdd = self.AgeYears(all_data.YearRemodAdd)
-		all_data.GarageYrBlt = self.AgeYears(all_data.GarageYrBlt)
-		all_data.YrSold = self.AgeYears(all_data.YrSold)
+		data.YearBuilt = self.AgeYears(data.YearBuilt)
+		data.YearRemodAdd = self.AgeYears(data.YearRemodAdd)
+		data.GarageYrBlt = self.AgeYears(data.GarageYrBlt)
+		data.YrSold = self.AgeYears(data.YrSold)
 
-		all_data['Remod'] = 2
-		all_data.loc[(all_data.YearBuilt == all_data.YearRemodAdd), ['Remod']] = 0
-		all_data.loc[(all_data.YearBuilt != all_data.YearRemodAdd), ['Remod']] = 1
+		data['Remod'] = 2
+		data.loc[(data.YearBuilt == data.YearRemodAdd), ['Remod']] = 0
+		data.loc[(data.YearBuilt != data.YearRemodAdd), ['Remod']] = 1
 
 		#all_data['Age'] = all_data.YearRemodAdd - all_data.YrSold  # sice I convert both to age
 
-		all_data["IsNew"] = 2
-		all_data.loc[(all_data.YearBuilt == all_data.YrSold), ['IsNew']] = 1
-		all_data.loc[(all_data.YearBuilt != all_data.YrSold), ['IsNew']] = 0
+		data["WasNew"] = 2
+		data.loc[(data.YearBuilt == data.YrSold), ['WasNew']] = 1
+		data.loc[(data.YearBuilt != data.YrSold), ['WasNew']] = 0
 
-		all_data.drop(
+		data.drop(
 			['FireplaceQu', 'BsmtSFPoints', 'TotalBsmtSF', 'GarageArea', 'GarageCars', 'OverallQual', 'GrLivArea',
 			 'TotalBsmtSF_x_Bsm', '1stFlrSF', 'PoolArea', 'LotArea', 'SaleCondition_Partial', 'Exterior1st_VinylSd',
 			 'GarageCond', 'HouseStyle_2Story', 'BsmtSFMultPoints', 'ScreenPorch', 'LowQualFinSF', 'BsmtFinSF2',
 			 'TSsnPorch'], axis=1, inplace=True)
 
-		all_data.rename(columns={'2ndFlrSF': 'SndFlrSF'}, inplace=True)
+		data.rename(columns={'2ndFlrSF': 'SndFlrSF'}, inplace=True)
 
 
 
 
 
 		# Remove the higest correlations and run a multiple regression
-		cols = all_data.columns
+		cols = data.columns
 		print(cols)
 		cols = cols.drop(['SalePrice'])
 		#vif = self.VRF('SalePrice', all_data.loc[all_data.SalePrice > 0, cols], all_data.SalePrice[all_data.SalePrice > 0], cols)
@@ -157,29 +209,29 @@ class FeatureEngineering:
 		print(cols)
 		#print(vif)
 
-		df_copy = all_data[all_data.SalePrice > 0].copy()
+		df_copy = data[data.SalePrice > 0].copy()
 
-		all_data.CentralAir = all_data.CentralAir.astype('uint8')
-		all_data.Garage_Newest = all_data.Garage_Newest.astype('uint8')
-		all_data.EnclosedPorch = all_data.EnclosedPorch.astype('uint8')
-		all_data.FullBath = all_data.FullBath.astype('uint8')
-		all_data.HalfBath = all_data.HalfBath.astype('uint8')
-		all_data.BsmtFullBath = all_data.BsmtFullBath.astype('uint8')
-		all_data.BsmtHalfBath = all_data.BsmtHalfBath.astype('uint8')
-		all_data.Remod = all_data.Remod.astype('uint8')
-		all_data.IsNew = all_data.IsNew.astype('uint8')
-		all_data.Street = all_data.Street.astype('uint8')  # orinal
-		all_data.PavedDrive = all_data.PavedDrive.astype('uint8')  # ordinal
-		all_data.Functional = all_data.Functional.astype('uint8')  # ordinal
-		all_data.LandSlope = all_data.LandSlope.astype('uint8')  # ordinal
+		data.CentralAir = data.CentralAir.astype('uint8')
+		data.Garage_Newest = data.Garage_Newest.astype('uint8')
+		data.EnclosedPorch = data.EnclosedPorch.astype('uint8')
+		data.FullBath = data.FullBath.astype('uint8')
+		data.HalfBath = data.HalfBath.astype('uint8')
+		data.BsmtFullBath = data.BsmtFullBath.astype('uint8')
+		data.BsmtHalfBath = data.BsmtHalfBath.astype('uint8')
+		data.Remod = data.Remod.astype('uint8')
+		data.WasNew = data.WasNew.astype('uint8')
+		data.Street = data.Street.astype('uint8')  # orinal
+		data.PavedDrive = data.PavedDrive.astype('uint8')  # ordinal
+		data.Functional = data.Functional.astype('uint8')  # ordinal
+		data.LandSlope = data.LandSlope.astype('uint8')  # ordinal
 
-		numeric_features = list(all_data.loc[:, cols].dtypes[(all_data.dtypes != "category") & (all_data.dtypes !='uint8')].index)
+		numeric_features = list(data.loc[:, cols].dtypes[(data.dtypes != "category") & (data.dtypes != 'uint8')].index)
 
 		'''
 		with warnings.catch_warnings():
 		    warnings.simplefilter("ignore", category=RuntimeWarning)
 		'''
-		skewed_features = all_data[numeric_features].apply(lambda x : skew (x.dropna())).sort_values(ascending=False)
+		skewed_features = data[numeric_features].apply(lambda x : skew (x.dropna())).sort_values(ascending=False)
 
 		#compute skewness
 		skewness = pd.DataFrame({'Skew' :skewed_features})   
@@ -191,9 +243,9 @@ class FeatureEngineering:
 		l_opt = {}
 
 		for feat in skewness.index:
-		    all_data[feat], l_opt[feat] = boxcox((all_data[feat]+1))
+			data[feat], l_opt[feat] = boxcox((data[feat] + 1))
 
-		skewed_features2 = all_data[skewness.index].apply(lambda x : skew (x.dropna())).sort_values(ascending=False)
+		skewed_features2 = data[skewness.index].apply(lambda x : skew (x.dropna())).sort_values(ascending=False)
 
 		#compute skewness
 		skewness2 = pd.DataFrame({'New Skew' :skewed_features2}) 
@@ -201,58 +253,56 @@ class FeatureEngineering:
 
 
 
-		y = all_data.SalePrice[all_data.SalePrice > 0]
-		X = all_data.loc[all_data.SalePrice > 0, ['ConstructArea']]
+		y = data.SalePrice[data.SalePrice > 0]
+		X = data.loc[data.SalePrice > 0, ['ConstructArea']]
 		#self.poly(X, y, 'ConstructArea')
 
-		X = all_data.loc[all_data.SalePrice > 0, ['ConstructArea', 'TotalPoints']]
+		X = data.loc[data.SalePrice > 0, ['ConstructArea', 'TotalPoints']]
 		#self.poly(X, y)
 
-		X = all_data.loc[
-			all_data.SalePrice > 0, ['ConstructArea', 'TotalPoints', 'LotAreaMultSlope', 'GarageArea_x_Car']]
+		X = data.loc[
+			data.SalePrice > 0, ['ConstructArea', 'TotalPoints', 'LotAreaMultSlope', 'GarageArea_x_Car']]
 		#self.poly(X, y)
 
 		poly_cols = ['ConstructArea', 'TotalPoints', 'LotAreaMultSlope', 'GarageArea_x_Car']
 
 		pf = PolynomialFeatures(degree=3, interaction_only=False, include_bias=False)
-		res = pf.fit_transform(all_data.loc[:, poly_cols])
+		res = pf.fit_transform(data.loc[:, poly_cols])
 
 		target_feature_names = [feat.replace(' ', '_') for feat in pf.get_feature_names(poly_cols)]
-		output_df = pd.DataFrame(res, columns=target_feature_names, index=all_data.index).iloc[:, len(poly_cols):]
+		output_df = pd.DataFrame(res, columns=target_feature_names, index=data.index).iloc[:, len(poly_cols):]
 		print('Polynomial Features included:', output_df.shape[1])
 		# display(output_df.head())
-		all_data = pd.concat([all_data, output_df], axis=1)
-		print('Total Features after Polynomial Features included:', all_data.shape[1])
+		data = pd.concat([data, output_df], axis=1)
+		print('Total Features after Polynomial Features included:', data.shape[1])
 		colsP = output_df.columns
 
 		del output_df, target_feature_names, res, pf
 
-		y_train = (all_data.SalePrice[all_data.SalePrice>0].reset_index(drop=True, inplace=False))
+		y_train = (data.SalePrice[data.SalePrice > 0].reset_index(drop=True, inplace=False))
 		#self.trainingData = all_data.loc[(all_data.SalePrice>0), cols].reset_index(drop=True, inplace=False)
 		#self.testingData = all_data.loc[(all_data.SalePrice==0), cols].reset_index(drop=True, inplace=False)
 
-		return all_data, y_train, cols, colsP
+		return data, y_train, cols, colsP
 
 	def one_hot_encode(self, df):
 		categorical_cols = df.select_dtypes(include=['object']).columns
 
-		print(len(categorical_cols), "categorical columns")
-		print(categorical_cols)
-		# Remove special charactres and withe spaces.
-		for col in categorical_cols:
-			df[col] = df[col].str.replace('\W', '').str.replace(' ', '_')  # .str.lower()
+		# print(len(categorical_cols), "categorical columns")
+		# print(categorical_cols)
+		# Remove special characters and white spaces.
+		for c in categorical_cols:
+			df[c] = df[c].str.replace('\W', '').str.replace(' ', '_')
 
 		dummies = pd.get_dummies(df[categorical_cols], columns=categorical_cols).columns
 		df = pd.get_dummies(df, columns=categorical_cols)
 
-		print("Total Columns:", len(df.columns))
-		print(df.info())
+		# print("Total Columns:", len(df.columns))
+		# print(df.info())
 
 		return df, dummies
 
-	def AgeYears(self, feature):
-		return feature.apply(lambda x: 0 if x == 0 else (2011 - x))
-
+	# Unused currently
 	def VRF(self, predict, data, y, cols):
 		scale = StandardScaler(with_std=False)
 		df = pd.DataFrame(scale.fit_transform(data), columns=cols)
@@ -272,6 +322,7 @@ class FeatureEngineering:
 		# display(vif.sort_values('VIF Factor'))
 		return vif
 
+	# Unused currently
 	def poly(self, X, y, feat=''):
 
 		# Initializatin of regression models
