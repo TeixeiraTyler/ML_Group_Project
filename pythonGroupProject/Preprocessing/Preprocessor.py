@@ -11,16 +11,16 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import LabelEncoder
 
+from Utils import Utils
 from Preprocessing.Correlator import Correlator
 from Preprocessing.Filler import Filler
 from Preprocessing.Converter import Converter
 from Preprocessing.Encoder import Encoder
 from Preprocessing.Filterer import Filterer
 from Preprocessing.DataObject import DataObject
-from Preprocessing.ExploratoryDataAnalysis import ExploratoryDataAnalysis
-from Preprocessing.CheckDataQuality import CheckDataQuality
-from Preprocessing.MappingOrdinalFeatures import MappingOrdinalFeatures
-from Preprocessing.FeatureEngineering import FeatureEngineering
+from Preprocessing.PreliminaryDataAdjuster import PreliminaryDataAdjuster
+from Preprocessing.OrdinalToNumericalConverter import OrdinalToNumericalConverter
+from Preprocessing.FeatureEngineer import FeatureEngineer
 from Preprocessing.SelectFeatures import SelectFeatures
 from Preprocessing.Modeling import Modeling
 
@@ -35,52 +35,24 @@ class Preprocessor:
 	def process(self, test_ID):
 		dataObject = DataObject(self.trainingData, self.testingData, self.combinedData)
 
-		# Step 1 is preparing environment
+		prelim = PreliminaryDataAdjuster(dataObject)
+		dataObject = prelim.go()
 
-		step2 = ExploratoryDataAnalysis(dataObject)
-		dataObject = step2.go()
+		converter = OrdinalToNumericalConverter(dataObject)
+		dataObject = converter.go()
 
-		step3 = CheckDataQuality(dataObject)
-		dataObject = step3.go()
+		creator = FeatureEngineer(dataObject)
+		dataObject, dataObject.combinedData, y_train, cols, colsP = creator.go()
 
-		step4 = MappingOrdinalFeatures(dataObject)
-		dataObject = step4.go()
 
-		step5 = FeatureEngineering(dataObject)
-		dataObject, all_data, y_train, cols, colsP = step5.go()
-
-		#step6 = Train(dataObject)
-		#dataObject = step6.go()
 
 		step7 = SelectFeatures(dataObject)
-		dataObject, totalCols, RFEcv, XGBestCols = step7.go(all_data, cols, colsP)
-
-		#step8 = CompressData(dataObject)
-		#dataObject = step8.go(y_train)
-		
-		#input Dataobject
-		#Dataobject.trainingData = train 
-		#Dataobject.testingData = y_train
+		dataObject, totalCols, RFEcv, XGBestCols = step7.go(dataObject.combinedData, cols, colsP)
 		
 		step9 = Modeling(dataObject)
 		ouput_ensembled = step9.go(all_data, totalCols, test_ID, colsP, RFEcv, XGBestCols)
 
-
-		ouput_ensembled.to_csv('SalePrice_N_submission.csv', index = False)
-		# filler = Filler(dataObject)
-		# dataObject = filler.fillMissingData()
-		#
-		# converter = Converter(dataObject)
-		# dataObject = converter.convertData()
-		#
-		# filterer = Filterer(dataObject)
-		# dataObject = filterer.filterData()
-		#
-		# encoder = Encoder(dataObject)
-		# dataObject = encoder.encode()
-		#
-		# correlator = Correlator(dataObject)
-		# dataObject = correlator.correlateData()
+		ouput_ensembled.to_csv('SalePrice_N_submission.csv', index=False)
 
 		print(dataObject.trainingData)
 
