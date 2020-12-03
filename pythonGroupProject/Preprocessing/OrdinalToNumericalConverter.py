@@ -14,19 +14,31 @@ from sklearn.preprocessing import LabelEncoder
 from Preprocessing.DataObject import DataObject
 
 
-class MappingOrdinalFeatures:
+class OrdinalToNumericalConverter:
 	def __init__(self, dataObject):
 		self.trainingData = dataObject.trainingData
 		self.testingData = dataObject.testingData
 		self.combinedData = dataObject.combinedData
 
 	def go(self):
-		self.trainingData = self.map_ordinals(self.trainingData)
-		self.testingData = self.map_ordinals(self.testingData)
+		self.trainingData = self.mapCategoricalToOrdinal(self.trainingData)
+		self.testingData = self.mapCategoricalToOrdinal(self.testingData)
 		self.combinedData = [self.trainingData, self.testingData]
 
 		return DataObject(self.trainingData, self.testingData, self.combinedData)
 
+	def mapCategoricalToOrdinal(self, dataset):
+		ordinal_label = ['LandSlope', 'ExterQual', 'ExterCond', 'HeatingQC', 'KitchenQual',
+						 'FireplaceQu', 'GarageCond', 'PavedDrive', 'LotShape', 'BsmtQual', 'BsmtCond', 'GarageQual',
+						 'PoolQC', 'BsmtExposure', 'BsmtFinType1', 'BsmtFinType2', 'CentralAir', 'GarageFinish',
+						 'Functional',
+						 'Street', 'Fence']
+		number = LabelEncoder()
+		for i in ordinal_label:
+			dataset[i] = number.fit_transform(dataset[i].astype('str'))
+		return dataset
+
+	# Currently unused
 	def map_ordinals(self, data):
 		# LandSlope: Slope of property
 		LandSlope = {}
