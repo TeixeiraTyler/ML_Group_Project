@@ -38,10 +38,10 @@ class FeatureEngineer:
 		#self.trainingData = self.featureEngineer(self.trainingData, ntrain)
 		#self.testingData = self.featureEngineer(self.testingData, ntrain)
 		#all_data = pd.concat((self.trainingData, self.testingData)).reset_index(drop=True)
-		# self.trainingData, y_train, cols, colsP = self.featureEngineer(self.trainingData, ntrain)
-		# self.testingData, y_train, cols, colsP = self.featureEngineer(self.testingData, ntrain)
-		# self.combinedData = [self.trainingData, self.testingData]
-		self.combinedData, y_train, cols, colsP = self.featureEngineer(self.combinedData, ntrain)
+		self.trainingData, y_train, cols, colsP = self.featureEngineer(self.trainingData, ntrain)
+		self.testingData, y_train, cols, colsP = self.featureEngineer(self.testingData, ntrain)
+		self.combinedData = [self.trainingData, self.testingData]
+		# self.combinedData, y_train, cols, colsP = self.featureEngineer(self.combinedData, ntrain)
 
 		return DataObject(self.trainingData, self.testingData, self.combinedData), self.combinedData, y_train, cols, colsP
 
@@ -132,8 +132,6 @@ class FeatureEngineer:
 
 
 
-
-
 		data.MSSubClass = data.MSSubClass.astype('str')
 		data.MoSold = data.MoSold.astype('str')
 
@@ -156,15 +154,6 @@ class FeatureEngineer:
 
 
 
-
-
-
-
-		data.YearBuilt = self.AgeYears(data.YearBuilt)
-		data.YearRemodAdd = self.AgeYears(data.YearRemodAdd)
-		data.GarageYrBlt = self.AgeYears(data.GarageYrBlt)
-		data.YrSold = self.AgeYears(data.YrSold)
-
 		data['Remod'] = 2
 		data.loc[(data.YearBuilt == data.YearRemodAdd), ['Remod']] = 0
 		data.loc[(data.YearBuilt != data.YearRemodAdd), ['Remod']] = 1
@@ -182,8 +171,6 @@ class FeatureEngineer:
 			 'TSsnPorch'], axis=1, inplace=True)
 
 		data.rename(columns={'2ndFlrSF': 'SndFlrSF'}, inplace=True)
-
-
 
 
 

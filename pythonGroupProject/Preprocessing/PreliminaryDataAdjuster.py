@@ -11,6 +11,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.base import TransformerMixin
+from Utils import Utils
 
 from Preprocessing.DataObject import DataObject
 
@@ -20,7 +21,7 @@ class PreliminaryDataAdjuster:
 	def __init__(self, dataObject):
 		self.trainingData = dataObject.trainingData
 		self.testingData = dataObject.testingData
-		data = dataObject.combinedData
+		self.combinedData = dataObject.combinedData
 
 	def go(self):
 		self.trainingData.drop("Id", axis = 1, inplace = True)
@@ -47,8 +48,8 @@ class PreliminaryDataAdjuster:
 		# self.testingData = self.fill(self.trainingData)
 
 		self.trainingData = self.fillMissingData(self.trainingData)
-		self.trainingData = self.fillMissingData(self.testingDataData)
-		self.trainingData = self.fillMissingData(self.combinedData)
+		self.testingData = self.fillMissingData(self.testingData)
+		self.combinedData = [self.trainingData, self.testingData]
 
 		return DataObject(self.trainingData, self.testingData, self.combinedData)
 
@@ -151,37 +152,36 @@ class PreliminaryDataAdjuster:
 		data = [self.trainingData, self.testingData]
 		return DataObject(self.trainingData, self.testingData, data)
 
-	def fillMissingData(self):
+	def fillMissingData(self, dataset):
 		labelsToFillWithNA = ['Alley', 'Fence', 'MiscFeature', 'PoolQC', 'FireplaceQu']
 
-		for dataset in self.combinedData:
-			Utils.printDatasetNulls(dataset)
+		# Utils.printDatasetNulls(dataset)
 
-			# Handle missing values
-			dataset = self.fillMSZoningMissingValues(dataset)
-			dataset = self.fillLotFrontageMissingValues(dataset)
-			dataset = self.fillMasonryVeneerMissingValues(dataset)
-			dataset = self.fillExteriorCoveringMissingValues(dataset)
-			dataset = self.fillBasementFeaturesMissingValues(dataset)
-			dataset = self.fillElectricalMissingValues(dataset)
-			dataset = self.fillKitchenQualityMissingValues(dataset)
-			dataset = self.fillGarageFeaturesMissingValues(dataset)
-			dataset = self.fillPoolQualityMissingValues(dataset)
-			dataset = self.fillSaleTypeMissingValues(dataset)
+		# Handle missing values
+		dataset = self.fillMSZoningMissingValues(dataset)
+		dataset = self.fillLotFrontageMissingValues(dataset)
+		dataset = self.fillMasonryVeneerMissingValues(dataset)
+		dataset = self.fillExteriorCoveringMissingValues(dataset)
+		dataset = self.fillBasementFeaturesMissingValues(dataset)
+		dataset = self.fillElectricalMissingValues(dataset)
+		dataset = self.fillKitchenQualityMissingValues(dataset)
+		dataset = self.fillGarageFeaturesMissingValues(dataset)
+		dataset = self.fillPoolQualityMissingValues(dataset)
+		dataset = self.fillSaleTypeMissingValues(dataset)
 
-			# Handle NULL values
-			dataset = Utils.fillNullLabels(dataset, labelsToFillWithNA, 'NA')
-			dataset = Utils.fillNullLabels(dataset, ['Functional'],
-										   'Typ')  # data_description.txt tells us to assume typical 'typ'
+		# Handle NULL values
+		dataset = Utils.fillNullLabels(dataset, labelsToFillWithNA, 'NA')
+		dataset = Utils.fillNullLabels(dataset, ['Functional'],
+									   'Typ')  # data_description.txt tells us to assume typical 'typ'
 
-			Utils.printDatasetNulls(dataset)
+		# Utils.printDatasetNulls(dataset)
 
-		return DataObject(self.trainingData, self.testingData, self.combinedData)
+		return dataset
 
 	# This function handles the MSZoning missing values
 	# Since missing values are small for this feature we will just fill with the most
 	#    common value in the dataset
-	def fillMSZoningMissingValues(dataset):
+	def fillMSZoningMissingValues(self, dataset):
 		mostFrequentZoningValue = dataset.MSZoning.dropna().mode()[0]
 		dataset['MSZoning'] = dataset['MSZoning'].fillna(mostFrequentZoningValue)
 
@@ -192,7 +192,7 @@ class PreliminaryDataAdjuster:
 	# Then we are going to fill the missing values with the mean Lot Frontage in the neighborhood
 	#
 	# We are grouping by neighborhood because houses in a neighborhood have similiar LotFrontage values
-	def fillLotFrontageMissingValues(dataset):
+	def fillLotFrontageMissingValues(self, dataset):
 		neighborhoodLotFrontageMeans = dataset.groupby('Neighborhood').LotFrontage.mean()
 		lotFrontageValues = (dataset.loc[dataset.LotFrontage.isnull(), ['Neighborhood']]).transpose()
 
@@ -203,7 +203,7 @@ class PreliminaryDataAdjuster:
 		dataset['LotFrontage'] = lotFrontageFeature
 		return dataset
 
-	def fillMasonryVeneerMissingValues(dataset):
+	def fillMasonryVeneerMissingValues(self, dataset):
 		masonryVeneerCase1NULL = (
 			dataset.loc[(dataset.MasVnrType.isnull()) & (dataset.MasVnrArea > 0), ['MasVnrType']]).transpose()
 		masonryVeneerCase1None = (
@@ -237,19 +237,19 @@ class PreliminaryDataAdjuster:
 	# Need to handle the following cases:
 	#    1. Fill GarageType NULL values with 'NA'
 	#    2. Handle case where GarageType is Detchd but the rest of the row is NULL
-	def fillGarageFeaturesMissingValues(dataset):
+	def fillGarageFeaturesMissingValues(self, dataset):
 		dataset = Utils.fillNullLabels(dataset, ['GarageType'], 'NA')
 
-		dataset = fillGarageFeatureValue(dataset, 'GarageYrBlt', 'median')
-		dataset = fillGarageFeatureValue(dataset, 'GarageFinish', 'mode')
-		dataset = fillGarageFeatureValue(dataset, 'GarageCars', 'median')
-		dataset = fillGarageFeatureValue(dataset, 'GarageArea', 'median')
-		dataset = fillGarageFeatureValue(dataset, 'GarageQual', 'mode')
-		dataset = fillGarageFeatureValue(dataset, 'GarageCond', 'mode')
+		dataset = self.fillGarageFeatureValue(dataset, 'GarageYrBlt', 'median')
+		dataset = self.fillGarageFeatureValue(dataset, 'GarageFinish', 'mode')
+		dataset = self.fillGarageFeatureValue(dataset, 'GarageCars', 'median')
+		dataset = self.fillGarageFeatureValue(dataset, 'GarageArea', 'median')
+		dataset = self.fillGarageFeatureValue(dataset, 'GarageQual', 'mode')
+		dataset = self.fillGarageFeatureValue(dataset, 'GarageCond', 'mode')
 
 		return dataset
 
-	def fillGarageFeatureValue(dataset, feature, fillType):
+	def fillGarageFeatureValue(self, dataset, feature, fillType):
 		if (fillType == 'median'):
 			fillValue = dataset[dataset.GarageType == 'Detchd'][feature].median()
 			fillnaValue = 0
@@ -272,7 +272,7 @@ class PreliminaryDataAdjuster:
 	# We are going to use the OverallQuality feature of the house to determine the pool quality
 	# The Pool quality has 5 categorical features and OverallQuality has 10 categorical features.
 	#   We will divide OverallQuality by 2 to get the correlated pool quality value
-	def fillPoolQualityMissingValues(dataset):
+	def fillPoolQualityMissingValues(self, dataset):
 		poolQualityMap = {0: 'NA', 1: 'Po', 2: 'Fa', 3: 'TA', 4: 'Gd', 5: 'Ex'}
 		poolQuality = (
 			(dataset.loc[(dataset.PoolArea > 0) & (dataset.PoolQC.isnull()), ['OverallQual']] / 2).round()).transpose()
@@ -287,7 +287,7 @@ class PreliminaryDataAdjuster:
 	# This function handles the cases where kitchen quality is missing
 	# Currently there is only one value missing and it is in the testing set,
 	#   so we will just fill with the most common value in the dataset
-	def fillKitchenQualityMissingValues(dataset):
+	def fillKitchenQualityMissingValues(self, dataset):
 		kitchenQualityMode = dataset.KitchenQual.mode()[0]
 		kitchenQuality = (
 			dataset.loc[(dataset.KitchenAbvGr > 0) & (dataset.KitchenQual.isnull()), ['KitchenQual']]).transpose()
@@ -299,63 +299,15 @@ class PreliminaryDataAdjuster:
 		dataset['KitchenQual'] = kitchenQualFeature
 		return dataset
 
-	def fillSaleTypeMissingValues(dataset):
+	def fillSaleTypeMissingValues(self, dataset):
 		mode = dataset['SaleType'].mode()[0]
 		dataset['SaleType'] = dataset['SaleType'].fillna(mode)
-		return dataset
-
-	# This function handles the Basement Features missing values
-	# Need to handle the following cases:
-	#    1. TotalBsmtSF is greater than zero but BsmtExposure is NULL
-	#    2. TotalBsmtSF is greater than zero but BsmtQual is NULL
-	#    3. TotalBsmtSF is greater than zero but BsmtCond is NULL
-	#    4. BsmtFinSF2 is greater than zero but BsmtFinType2 is NULL
-	#    5. BsmtFinSF2 is zero and BsmtUnfSF is not zero but BsmtFinType2 is finished
-	#       - Set BsmtFinSF2 = BsmtUnfSF and set BsmtUnfSF = 0
-	#    6. Fill categorical basement data with NA
-	#    7. Fill numerical basement data with 0
-	def fillBasementFeaturesMissingValues(dataset):
-		bsmtQualCondition = (dataset.TotalBsmtSF > 0) & (dataset.BsmtQual.isnull())
-		bsmtCondCondition = (dataset.TotalBsmtSF > 0) & (dataset.BsmtCond.isnull())
-		bsmtExposureCondition = (dataset.TotalBsmtSF > 0) & (dataset.BsmtExposure.isnull())
-		bsmtFinType2Condition = (dataset.BsmtFinSF2 > 0) & (dataset.BsmtFinType2.isnull())
-		bsmtFinSF2Condition = (dataset.BsmtFinSF2 == 0) & (dataset.BsmtFinType2 != 'Unf') & (
-			~dataset.BsmtFinType2.isnull())
-
-		dataset = fillBasementFeatureWithMostCommon(dataset, 'BsmtQual', bsmtQualCondition)
-		dataset = fillBasementFeatureWithMostCommon(dataset, 'BsmtCond', bsmtCondCondition)
-		dataset = fillBasementFeatureWithMostCommon(dataset, 'BsmtExposure', bsmtExposureCondition)
-		dataset = fillBasementFeatureWithMostCommon(dataset, 'BsmtFinType2', bsmtFinType2Condition)
-		dataset = handleBsmtFinSF2SpecialCase(dataset, bsmtFinSF2Condition)
-
-		basementFeaturesToFillWithNA = ['BsmtQual', 'BsmtCond', 'BsmtExposure', 'BsmtFinType1', 'BsmtFinType2']
-		basementFeaturesToFillWith0 = ['BsmtFinSF1', 'BsmtFinSF2', 'BsmtUnfSF', 'TotalBsmtSF', 'BsmtFullBath',
-									   'BsmtHalfBath']
-		dataset = Utils.fillNullLabels(dataset, basementFeaturesToFillWithNA, 'NA')
-		dataset = Utils.fillNullLabels(dataset, basementFeaturesToFillWith0, 0)
-
-		return dataset
-
-	# This function handles the missing values of Electrical
-	# Since there are very few missing values we will fill with the most common
-	def fillElectricalMissingValues(dataset):
-		mostCommon = dataset['Electrical'].value_counts().index[0]
-		dataset['Electrical'] = dataset['Electrical'].fillna(mostCommon)
-
-		return dataset
-
-	def fillExteriorCoveringMissingValues(dataset):
-		exterior1stMode = dataset['Exterior1st'].mode()[0]
-		exterior2ndMode = dataset['Exterior2nd'].mode()[0]
-		dataset['Exterior1st'] = dataset['Exterior1st'].fillna(exterior1stMode)
-		dataset['Exterior2nd'] = dataset['Exterior2nd'].fillna(exterior2ndMode)
-
 		return dataset
 
 	# This function is called in 'fillBasementFeaturesMissingValues'
 	# It is for setting basement features with most common when they
 	#    are equal to null but the basement has a non zero area
-	def fillBasementFeatureWithMostCommon(dataset, feature, condition):
+	def fillBasementFeatureWithMostCommon(self, dataset, feature, condition):
 		mostCommon = dataset[feature].value_counts().index[0]
 		if (mostCommon == 'No'):
 			mostCommon = dataset[feature].value_counts().index[1]
@@ -369,10 +321,60 @@ class PreliminaryDataAdjuster:
 		dataset[feature] = datasetFeature
 		return dataset
 
+	# This function handles the Basement Features missing values
+	# Need to handle the following cases:
+	#    1. TotalBsmtSF is greater than zero but BsmtExposure is NULL
+	#    2. TotalBsmtSF is greater than zero but BsmtQual is NULL
+	#    3. TotalBsmtSF is greater than zero but BsmtCond is NULL
+	#    4. BsmtFinSF2 is greater than zero but BsmtFinType2 is NULL
+	#    5. BsmtFinSF2 is zero and BsmtUnfSF is not zero but BsmtFinType2 is finished
+	#       - Set BsmtFinSF2 = BsmtUnfSF and set BsmtUnfSF = 0
+	#    6. Fill categorical basement data with NA
+	#    7. Fill numerical basement data with 0
+	def fillBasementFeaturesMissingValues(self, dataset):
+		bsmtQualCondition = (dataset.TotalBsmtSF > 0) & (dataset.BsmtQual.isnull())
+		bsmtCondCondition = (dataset.TotalBsmtSF > 0) & (dataset.BsmtCond.isnull())
+		bsmtExposureCondition = (dataset.TotalBsmtSF > 0) & (dataset.BsmtExposure.isnull())
+		bsmtFinType2Condition = (dataset.BsmtFinSF2 > 0) & (dataset.BsmtFinType2.isnull())
+		bsmtFinSF2Condition = (dataset.BsmtFinSF2 == 0) & (dataset.BsmtFinType2 != 'Unf') & (
+			~dataset.BsmtFinType2.isnull())
+
+		dataset = self.fillBasementFeatureWithMostCommon(dataset, 'BsmtQual', bsmtQualCondition)
+		dataset = self.fillBasementFeatureWithMostCommon(dataset, 'BsmtCond', bsmtCondCondition)
+		dataset = self.fillBasementFeatureWithMostCommon(dataset, 'BsmtExposure', bsmtExposureCondition)
+		dataset = self.fillBasementFeatureWithMostCommon(dataset, 'BsmtFinType2', bsmtFinType2Condition)
+		dataset = self.handleBsmtFinSF2SpecialCase(dataset, bsmtFinSF2Condition)
+
+		basementFeaturesToFillWithNA = ['BsmtQual', 'BsmtCond', 'BsmtExposure', 'BsmtFinType1', 'BsmtFinType2']
+		basementFeaturesToFillWith0 = ['BsmtFinSF1', 'BsmtFinSF2', 'BsmtUnfSF', 'TotalBsmtSF', 'BsmtFullBath',
+									   'BsmtHalfBath']
+		dataset = Utils.fillNullLabels(dataset, basementFeaturesToFillWithNA, 'NA')
+		dataset = Utils.fillNullLabels(dataset, basementFeaturesToFillWith0, 0)
+
+		return dataset
+
+	# This function handles the missing values of Electrical
+	# Since there are very few missing values we will fill with the most common
+	def fillElectricalMissingValues(self, dataset):
+		mostCommon = dataset['Electrical'].value_counts().index[0]
+		dataset['Electrical'] = dataset['Electrical'].fillna(mostCommon)
+
+		return dataset
+
+	def fillExteriorCoveringMissingValues(self, dataset):
+		exterior1stMode = dataset['Exterior1st'].mode()[0]
+		exterior2ndMode = dataset['Exterior2nd'].mode()[0]
+		dataset['Exterior1st'] = dataset['Exterior1st'].fillna(exterior1stMode)
+		dataset['Exterior2nd'] = dataset['Exterior2nd'].fillna(exterior2ndMode)
+
+		return dataset
+
+
+
 	# This function is called in 'fillBasementFeaturesMissingValues'
 	# It handles the case where BsmtFinSF2 is zero and BsmtUnfSF is zero,
 	#   but BsmtFinType2 is finished
-	def handleBsmtFinSF2SpecialCase(dataset, condition):
+	def handleBsmtFinSF2SpecialCase(self, dataset, condition):
 		values = (dataset.loc[condition, ['BsmtFinSF2', 'BsmtUnfSF']]).transpose()
 
 		bsmtFinSF2Feature = dataset['BsmtFinSF2'].copy()
