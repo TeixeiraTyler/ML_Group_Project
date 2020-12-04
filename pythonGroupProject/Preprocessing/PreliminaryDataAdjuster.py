@@ -18,40 +18,29 @@ from Preprocessing.DataObject import DataObject
 
 # Removes outliers and unnecessary columns and fills n/a values.
 class PreliminaryDataAdjuster:
-	def __init__(self, dataObject):
-		self.trainingData = dataObject.trainingData
-		self.testingData = dataObject.testingData
-		self.combinedData = dataObject.combinedData
+	def __init__(self, combinedData):
+		self.combinedData = combinedData
 
 	def go(self):
-		self.trainingData.drop("Id", axis = 1, inplace = True)
-		self.testingData.drop("Id", axis = 1, inplace = True)
+		self.combinedData.drop("Id", axis = 1, inplace = True)
 
-		self.trainingData.rename(columns={'3SsnPorch':'TSsnPorch'}, inplace=True)
-		self.testingData.rename(columns={'3SsnPorch':'TSsnPorch'}, inplace=True)
+		self.combinedData.rename(columns={'3SsnPorch':'TSsnPorch'}, inplace=True)
 
-		self.testingData['SalePrice'] = 0
+		# self.testingData['SalePrice'] = 0
 
-		self.trainingData = self.trainingData.drop(self.trainingData[self.trainingData.SalePrice < 300000].index)
-		self.trainingData = self.trainingData.drop(self.trainingData[(self.trainingData.GrLivArea > 4000)].index)
-		self.trainingData = self.trainingData[self.trainingData.GarageArea * self.trainingData.GarageCars < 3700]
-		self.trainingData = self.trainingData[self.trainingData.GrLivArea * self.trainingData.TotRmsAbvGrd < 45000]
-		self.trainingData = self.trainingData[(self.trainingData.FullBath + (self.trainingData.HalfBath*0.5) + self.trainingData.BsmtFullBath + (self.trainingData.BsmtHalfBath*0.5)) < 5]
+		self.combinedData = self.combinedData.drop(self.combinedData[self.combinedData.SalePrice < 300000].index)
+		self.combinedData = self.combinedData.drop(self.combinedData[(self.combinedData.GrLivArea > 4000)].index)
+		self.combinedData = self.combinedData[self.combinedData.GarageArea * self.combinedData.GarageCars < 3700]
+		self.combinedData = self.combinedData[self.combinedData.GrLivArea * self.combinedData.TotRmsAbvGrd < 45000]
+		self.combinedData = self.combinedData[(self.combinedData.FullBath + (self.combinedData.HalfBath*0.5) + self.combinedData.BsmtFullBath + (self.combinedData.BsmtHalfBath*0.5)) < 5]
 
-		# self.trainingData = self.trainingData.loc[~(self.trainingData.SalePrice==392500.0)]
-		# self.trainingData = self.trainingData.loc[~((self.trainingData.SalePrice==275000.0) & (self.trainingData.Neighborhood=='Crawfor'))]
-		# self.trainingData.SalePrice = np.log1p(self.trainingData.SalePrice)
+		self.combinedData = self.combinedData.loc[~(self.combinedData.SalePrice==392500.0)]
+		self.combinedData = self.combinedData.loc[~((self.combinedData.SalePrice==275000.0) & (self.combinedData.Neighborhood=='Crawfor'))]
+		self.combinedData.SalePrice = np.log1p(self.combinedData.SalePrice)
 
-		# all_data = pd.concat((self.trainingData, self.testingData)).reset_index(drop=True)
+		self.combinedData = self.fillMissingData(self.combinedData)
 
-		# self.trainingData = self.fill(self.trainingData)
-		# self.testingData = self.fill(self.trainingData)
-
-		self.trainingData = self.fillMissingData(self.trainingData)
-		self.testingData = self.fillMissingData(self.testingData)
-		self.combinedData = [self.trainingData, self.testingData]
-
-		return DataObject(self.trainingData, self.testingData, self.combinedData)
+		return self.combinedData
 
 	# Currently unused.
 	def fill(self, data):
@@ -146,11 +135,11 @@ class PreliminaryDataAdjuster:
 
 		data = DT().fit_transform(data)
 
-		self.trainingData = data.loc[(data.SalePrice > 0)].reset_index(drop=True, inplace=False)
+		self.combinedData = data.loc[(data.SalePrice > 0)].reset_index(drop=True, inplace=False)
 		self.testingData = data.loc[(data.SalePrice == 0)].reset_index(drop=True, inplace=False)
 
-		data = [self.trainingData, self.testingData]
-		return DataObject(self.trainingData, self.testingData, data)
+		data = [self.combinedData, self.testingData]
+		return DataObject(self.combinedData, self.testingData, data)
 
 	def fillMissingData(self, dataset):
 		labelsToFillWithNA = ['Alley', 'Fence', 'MiscFeature', 'PoolQC', 'FireplaceQu']

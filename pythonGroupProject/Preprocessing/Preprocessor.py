@@ -29,28 +29,27 @@ class Preprocessor:
 	def __init__(self, trainingData, testingData):
 		self.trainingData = trainingData
 		self.testingData = testingData
-		self.combinedData = [trainingData, testingData]
 
 	# main function that combines all preprocessing.
 	def process(self, test_ID):
-		dataObject = DataObject(self.trainingData, self.testingData, self.combinedData)
+		combinedData = pd.concat((self.trainingData, self.testingData)).reset_index(drop=True)
 
-		prelim = PreliminaryDataAdjuster(dataObject)
-		dataObject = prelim.go()
+		prelim = PreliminaryDataAdjuster(combinedData)
+		combinedData = prelim.go()
 
-		converter = OrdinalToNumericalConverter(dataObject)
-		dataObject = converter.go()
+		converter = OrdinalToNumericalConverter(combinedData)
+		combinedData = converter.go()
 
-		creator = FeatureEngineer(dataObject)
-		dataObject, dataObject.combinedData, y_train, cols, colsP = creator.go()
+		creator = FeatureEngineer(combinedData, self.trainingData)
+		combinedData, combinedData, y_train, cols, colsP = creator.go()
 
 
 
-		step7 = SelectFeatures(dataObject)
-		dataObject, totalCols, RFEcv, XGBestCols = step7.go(dataObject.combinedData, cols, colsP)
+		step7 = SelectFeatures(combinedData)
+		dataObject, totalCols, RFEcv, XGBestCols = step7.go(combinedData, cols, colsP)
 		
-		step9 = Modeling(dataObject)
-		ouput_ensembled = step9.go(all_data, totalCols, test_ID, colsP, RFEcv, XGBestCols)
+		step9 = Modeling(combinedData)
+		ouput_ensembled = step9.go(combinedData, totalCols, test_ID, colsP, RFEcv, XGBestCols)
 
 		ouput_ensembled.to_csv('SalePrice_N_submission.csv', index=False)
 

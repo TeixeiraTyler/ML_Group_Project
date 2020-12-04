@@ -15,17 +15,13 @@ from Preprocessing.DataObject import DataObject
 
 
 class OrdinalToNumericalConverter:
-	def __init__(self, dataObject):
-		self.trainingData = dataObject.trainingData
-		self.testingData = dataObject.testingData
-		self.combinedData = dataObject.combinedData
+	def __init__(self, combinedData):
+		self.combinedData = combinedData
 
 	def go(self):
-		self.trainingData = self.mapCategoricalToOrdinal(self.trainingData)
-		self.testingData = self.mapCategoricalToOrdinal(self.testingData)
-		self.combinedData = [self.trainingData, self.testingData]
+		self.combinedData = self.mapCategoricalToOrdinal(self.combinedData)
 
-		return DataObject(self.trainingData, self.testingData, self.combinedData)
+		return self.combinedData
 
 	def mapCategoricalToOrdinal(self, dataset):
 		ordinal_label = ['LandSlope', 'ExterQual', 'ExterCond', 'HeatingQC', 'KitchenQual',

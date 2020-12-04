@@ -19,31 +19,21 @@ from Preprocessing.DataObject import DataObject
 
 
 class FeatureEngineer:
-	def __init__(self, dataObject):
-		self.trainingData = dataObject.trainingData
-		self.testingData = dataObject.testingData
-		self.combinedData = dataObject.combinedData
+	def __init__(self, combinedData, trainingData):
+		self.combinedData = combinedData
+		self.trainingData = trainingData
 
 	def go(self):
-		self.trainingData = self.changeYearsToAge(self.trainingData)
-		self.testingData = self.changeYearsToAge(self.testingData)
+		self.combinedData = self.changeYearsToAge(self.combinedData)
 
-		self.trainingData = self.addRemodAndConvertAge(self.trainingData)
-		self.testingData = self.addRemodAndConvertAge(self.testingData)
+		self.combinedData = self.addRemodAndConvertAge(self.combinedData)
 
-		self.trainingData = self.defineUint8Types(self.trainingData)
-		self.testingData = self.defineUint8Types(self.testingData)
+		self.combinedData = self.defineUint8Types(self.combinedData)
 
 		ntrain = self.trainingData.shape[0]
-		#self.trainingData = self.featureEngineer(self.trainingData, ntrain)
-		#self.testingData = self.featureEngineer(self.testingData, ntrain)
-		#all_data = pd.concat((self.trainingData, self.testingData)).reset_index(drop=True)
-		self.trainingData, y_train, cols, colsP = self.featureEngineer(self.trainingData, ntrain)
-		self.testingData, y_train, cols, colsP = self.featureEngineer(self.testingData, ntrain)
-		self.combinedData = [self.trainingData, self.testingData]
-		# self.combinedData, y_train, cols, colsP = self.featureEngineer(self.combinedData, ntrain)
+		self.combinedData, y_train, cols, colsP = self.featureEngineer(self.combinedData, ntrain)
 
-		return DataObject(self.trainingData, self.testingData, self.combinedData), self.combinedData, y_train, cols, colsP
+		return self.combinedData, self.combinedData, y_train, cols, colsP
 
 	def changeYearsToAge(self, dataset):
 		dataset.YearBuilt = self.ageYears(dataset.YearBuilt)
@@ -267,7 +257,7 @@ class FeatureEngineer:
 		del output_df, target_feature_names, res, pf
 
 		y_train = (data.SalePrice[data.SalePrice > 0].reset_index(drop=True, inplace=False))
-		#self.trainingData = all_data.loc[(all_data.SalePrice>0), cols].reset_index(drop=True, inplace=False)
+		#self.combinedData = all_data.loc[(all_data.SalePrice>0), cols].reset_index(drop=True, inplace=False)
 		#self.testingData = all_data.loc[(all_data.SalePrice==0), cols].reset_index(drop=True, inplace=False)
 
 		return data, y_train, cols, colsP
