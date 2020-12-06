@@ -16,6 +16,8 @@ from Preprocessing.Filler import Filler
 from Preprocessing.Converter import Converter
 from Preprocessing.Encoder import Encoder
 from Preprocessing.Filterer import Filterer
+from Preprocessing.PreliminaryDataAdjuster import PreliminaryDataAdjuster
+from Preprocessing.OrdinalToNumericalConverter import OrdinalToNumericalConverter
 from Preprocessing.DataObject import DataObject
 from Preprocessing.ExploratoryDataAnalysis import ExploratoryDataAnalysis
 from Preprocessing.CheckDataQuality import CheckDataQuality
@@ -37,33 +39,20 @@ class Preprocessor:
 
 		# Step 1 is preparing environment
 
-		step2 = ExploratoryDataAnalysis(dataObject)
-		dataObject = step2.go()
+		PDA = PreliminaryDataAdjuster(dataObject)
+		dataObject = PDA.go()
 
-		step3 = CheckDataQuality(dataObject)
-		dataObject = step3.go()
+		ONC = OrdinalToNumericalConverter(dataObject)
+		dataObject = ONC.go()
 
-		step4 = MappingOrdinalFeatures(dataObject)
-		dataObject = step4.go()
+		FE = FeatureEngineering(dataObject)
+		dataObject, all_data, y_train, cols, colsP = FE.go()
 
-		step5 = FeatureEngineering(dataObject)
-		dataObject, all_data, y_train, cols, colsP = step5.go()
-
-		#step6 = Train(dataObject)
-		#dataObject = step6.go()
-
-		step7 = SelectFeatures(dataObject)
-		dataObject, totalCols, RFEcv, XGBestCols = step7.go(all_data, cols, colsP)
-
-		#step8 = CompressData(dataObject)
-		#dataObject = step8.go(y_train)
+		SF = SelectFeatures(dataObject)
+		dataObject, totalCols, RFEcv, XGBestCols = SF.go(all_data, cols, colsP)
 		
-		#input Dataobject
-		#Dataobject.trainingData = train 
-		#Dataobject.testingData = y_train
-		
-		step9 = Modeling(dataObject)
-		ouput_ensembled = step9.go(all_data, totalCols, test_ID, colsP, RFEcv, XGBestCols)
+		model = Modeling(dataObject)
+		ouput_ensembled = model.go(all_data, totalCols, test_ID, colsP, RFEcv, XGBestCols)
 
 
 		ouput_ensembled.to_csv('SalePrice_N_submission.csv', index = False)
