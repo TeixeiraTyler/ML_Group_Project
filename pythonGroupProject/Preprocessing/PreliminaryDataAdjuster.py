@@ -32,7 +32,6 @@ class PreliminaryDataAdjuster:
 
 		self.testingData['SalePrice'] = 0
 
-		# Deleting outliers
 		self.trainingData = self.trainingData.drop(
 			self.trainingData[(self.trainingData.GrLivArea > 4000) & (self.trainingData.SalePrice < 300000)].index)
 
@@ -59,9 +58,6 @@ class PreliminaryDataAdjuster:
 	def fillMissingData(self, dataset):
 		labelsToFillWithNA = ['Alley', 'Fence', 'MiscFeature', 'PoolQC', 'FireplaceQu']
 
-		# Utils.printDatasetNulls(dataset)
-
-		# Handle missing values
 		dataset = self.fillMSZoningMissingValues(dataset)
 		dataset = self.fillLotFrontageMissingValues(dataset)
 		dataset = self.fillMasonryVeneerMissingValues(dataset)
@@ -73,12 +69,9 @@ class PreliminaryDataAdjuster:
 		dataset = self.fillPoolQualityMissingValues(dataset)
 		dataset = self.fillSaleTypeMissingValues(dataset)
 
-		# Handle NULL values
 		dataset = Utils.fillNullLabels(dataset, labelsToFillWithNA, 'NA')
 		dataset = Utils.fillNullLabels(dataset, ['Functional'],
-									   'Typ')  # data_description.txt tells us to assume typical 'typ'
-
-		# Utils.printDatasetNulls(dataset)
+									   'Typ')
 
 		return dataset
 
